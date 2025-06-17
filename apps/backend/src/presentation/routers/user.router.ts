@@ -3,9 +3,12 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 import { UserRepository } from '../../infrastructure/firebase/user.repository';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { LikeRepository } from '../../infrastructure/firebase/like.repository';
+import type { ILikeRepository } from '../../domain/repositories/like.repository';
 
 export const userRouter = new Hono();
 const userRepository = new UserRepository();
+const likeRepository: ILikeRepository = new LikeRepository();
 
 // このルーターに属するすべてのルートに認証ミドルウェアを適用
 userRouter.use('/*', authMiddleware);
@@ -57,5 +60,22 @@ userRouter.delete('/me', async (c) => {
   } catch (error) {
     console.error('Failed to delete user:', error);
     return c.json({ error: 'Failed to delete user account' }, 500);
+  }
+});
+
+userRouter.post('/:userId/like', authMiddleware, async (c) => {
+  const likingUser = c.get('user');
+  const likedUserId = c.req.param('userId');
+
+  if (likingUser.uid === likedUserId) {
+    return c.json({ error: 'You cannot like yourself.' }, 400);
+  }
+
+  try {
+    await likeRepository.create(likingUser.uid, likedUserId);
+    return c.json({ message: 'Successfully liked user.' }, 201);
+  } catch (error) {
+    console.error('Failed to like user:', error);
+    return c.json({ error: 'Failed to like user.' }, 500);
   }
 }); 

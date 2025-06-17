@@ -28,8 +28,8 @@ encounterRouter.post(
     }
 
     try {
-      await encounterRepository.create(user.uid, encounteredUserId);
-      return c.json({ message: 'Encounter recorded successfully' }, 201);
+      const matchCreated = await encounterRepository.create(user.uid, encounteredUserId);
+      return c.json({ message: 'Encounter recorded successfully', matchCreated }, 201);
     } catch (error) {
       console.error('Failed to record encounter:', error);
       return c.json({ error: 'Failed to record encounter' }, 500);

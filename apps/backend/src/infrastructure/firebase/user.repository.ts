@@ -6,22 +6,12 @@ import axios from 'axios';
 
 // IUserRepositoryインターフェースを実際にFirebaseを使って実装するクラス
 export class UserRepository implements IUserRepository {
-  // ↓↓↓↓ ここから修正 ↓↓↓↓
-  // プロパティをgetterに変更して、呼び出されるまで初期化を遅らせる
-  private get db() {
-    return getFirestore();
-  }
-  private get auth() {
-    return getAuth();
-  }
-  private get userCollection() {
-    return this.db.collection('users');
-  }
-  // ↑↑↑↑ ここまで修正 ↑↑↑↑
+  constructor() {}
 
   async createUser(authInfo: { email: string; password?: string; userName: string }): Promise<User> {
-    // 1. Firebase Authenticationにユーザーを作成
-    const userRecord = await this.auth.createUser({ // this.authがgetterを呼び出す
+    const auth = getAuth();
+    const db = getFirestore();
+    const userRecord = await auth.createUser({
       email: authInfo.email,
       password: authInfo.password,
       displayName: authInfo.userName,
@@ -35,14 +25,13 @@ export class UserRepository implements IUserRepository {
       updatedAt: new Date(),
     };
 
-    // 2. Firestoreにユーザードキュメントを作成
-    await this.userCollection.doc(userRecord.uid).set(newUser); // this.userCollectionがgetterを呼び出す
-
+    await db.collection('users').doc(userRecord.uid).set(newUser);
     return newUser;
   }
 
   async findById(id: string): Promise<User | null> {
-    const doc = await this.userCollection.doc(id).get();
+    const db = getFirestore();
+    const doc = await db.collection('users').doc(id).get();
     if (!doc.exists) {
       return null;
     }
@@ -51,9 +40,6 @@ export class UserRepository implements IUserRepository {
 
   async signIn(email: string, password: string): Promise<{ token: string; user: User }> {
     const apiKey = process.env.FIREBASE_WEB_API_KEY;
-
-    console.log('[DEBUG] Reading FIREBASE_WEB_API_KEY:', apiKey);
-    
     const authUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`;
 
     const response = await axios.post(authUrl, {
@@ -74,21 +60,21 @@ export class UserRepository implements IUserRepository {
   }
 
   async update(id: string, userInfo: UpdatableUserInfo): Promise<User> {
-    const userRef = this.userCollection.doc(id);
-
+    const db = getFirestore();
+    const userRef = db.collection('users').doc(id);
     const updateData = {
       ...userInfo,
       updatedAt: new Date(),
     };
-
     await userRef.update(updateData);
-
     const updatedDoc = await userRef.get();
     return updatedDoc.data() as User;
   }
 
   async delete(id: string): Promise<void> {
-    await this.userCollection.doc(id).delete();
-    await this.auth.deleteUser(id);
+    const db = getFirestore();
+    const auth = getAuth();
+    await db.collection('users').doc(id).delete();
+    await auth.deleteUser(id);
   }
 }
