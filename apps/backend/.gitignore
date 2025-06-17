@@ -26,3 +26,9 @@ lerna-debug.log*
 
 # misc
 .DS_Store
+
+# .env file
+.env
+
+# service account key
+serviceAccountKey.json

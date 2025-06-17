@@ -1,16 +1,37 @@
-import { serve } from '@hono/node-server'
-import { Hono } from 'hono'
+import 'dotenv/config';
 
-const app = new Hono()
+import { Hono } from 'hono'
+import { serve } from '@hono/node-server'
+import { initializeApp, cert, type ServiceAccount } from 'firebase-admin/app'
+import serviceAccount from '../serviceAccountKey.json' assert { type: 'json' }
+import { authRouter } from './presentation/routers/auth.router'
+import { userRouter } from './presentation/routers/user.router'
+import { encounterRouter } from './presentation/routers/encounter.router'
+
+try {
+    initializeApp({
+        credential: cert(serviceAccount as ServiceAccount),
+    });
+    console.log('Firebase Admin SDK initialized successfully.');
+} catch (error) {
+    console.error('Firebase Admin SDK initialization error:', error);
+}
+
+const app = new Hono().basePath('/api')
 
 app.get('/', (c) => {
-    // データベースから情報を取ってくる
-  return c.text('Hello Hono!')
+    return c.text('Hello Campus Connect API!')
 })
 
+// ↓↓↓↓ ルーターを登録 ↓↓↓↓
+app.route('/auth', authRouter);
+app.route('/users', userRouter);
+app.route('/encounters', encounterRouter);
+
+const port = 3000
+console.log(`Server is running on port ${port}`)
+
 serve({
-  fetch: app.fetch,
-  port: 3000
-}, (info) => {
-  console.log(`Server is running on http://localhost:${info.port}`)
+    fetch: app.fetch,
+    port
 })
