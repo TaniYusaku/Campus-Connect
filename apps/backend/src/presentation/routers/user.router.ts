@@ -98,18 +98,23 @@ userRouter.post('/:userId/like', authMiddleware, async (c) => {
 // GET /api/users/encounters
 userRouter.get('/encounters', async (c) => {
   const userId = c.get('user').uid;
-  // EncounterRepositoryはUser[]を返す実装なので、そのまま返す
+  // ブロックしているユーザーIDのリストを取得
+  const blockedUserIds = await blockRepository.findAllIds(userId);
+  // すれ違ったユーザー一覧を取得
   const users = await encounterRepository.findRecentEncounteredUsers(userId);
-  // email等の機微情報を除外
-  const safeUsers = users.map(({ email, ...rest }) => rest);
+  // ブロック済みユーザーを除外
+  const safeUsers = users.filter(user => !blockedUserIds.includes(user.id)).map(({ email, ...rest }) => rest);
   return c.json(safeUsers);
 });
 
 // GET /api/users/friends
 userRouter.get('/friends', async (c) => {
   const userId = c.get('user').uid;
+  const blockedUserIds = await blockRepository.findAllIds(userId);
   const friendIds = await matchRepository.findAll(userId);
-  const users = await userRepository.findByIds(friendIds);
+  // ブロック済みユーザーを除外
+  const filteredIds = friendIds.filter(id => !blockedUserIds.includes(id));
+  const users = await userRepository.findByIds(filteredIds);
   const safeUsers = users.map(({ email, ...rest }) => rest);
   return c.json(safeUsers);
 });

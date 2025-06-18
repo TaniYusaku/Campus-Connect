@@ -12,6 +12,16 @@ export class BlockRepository implements IBlockRepository {
     return snapshot.docs.map(doc => doc.id);
   }
 
+  async findAllIds(userId: string): Promise<string[]> {
+    const db = getFirestore();
+    const blockedCol = db.collection('users').doc(userId).collection('blockedUsers');
+    const snapshot = await blockedCol.get();
+    if (snapshot.empty) {
+      return [];
+    }
+    return snapshot.docs.map(doc => doc.id);
+  }
+
   async create(blockerId: string, blockedId: string): Promise<void> {
     const db = getFirestore();
     const ref = db.collection('users').doc(blockerId).collection('blockedUsers').doc(blockedId);
