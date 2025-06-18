@@ -8,6 +8,8 @@ const registerSchema = z.object({
   userName: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(6),
+  faculty: z.string().optional(),
+  grade: z.number().optional(),
 });
 
 const loginSchema = z.object({
@@ -23,10 +25,10 @@ authRouter.post(
   '/register',
   zValidator('json', registerSchema),
   async (c) => {
-    const { userName, email, password } = c.req.valid('json');
+    const { userName, email, password, faculty, grade } = c.req.valid('json');
 
     try {
-      const user = await userRepository.createUser({ userName, email, password });
+      const user = await userRepository.createUser({ userName, email, password, faculty, grade });
       // パスワードなど不要な情報は返さない
       const { id, userName: name, email: userEmail } = user;
       return c.json({ id, userName: name, email: userEmail }, 201);

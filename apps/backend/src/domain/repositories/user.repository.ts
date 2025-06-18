@@ -12,9 +12,16 @@ export interface IUserRepository {
   update(id: string, userInfo: UpdatableUserInfo): Promise<User>;
   // ↓↓↓↓ 以下を追記 ↓↓↓↓
   delete(id: string): Promise<void>;
+  findByIds(userIds: string[]): Promise<User[]>;
 }
 
 // 更新可能なユーザー情報の型
 export type UpdatableUserInfo = {
   userName?: string;
+  faculty?: string;
+  grade?: number;
+  profilePhotoUrl?: string;
+  bio?: string;
+  hobbies?: string[];
+  snsLinks?: { [key: string]: string };
 };

@@ -8,7 +8,7 @@ import axios from 'axios';
 export class UserRepository implements IUserRepository {
   constructor() {}
 
-  async createUser(authInfo: { email: string; password?: string; userName: string }): Promise<User> {
+  async createUser(authInfo: { email: string; password?: string; userName: string; faculty?: string; grade?: number }): Promise<User> {
     const auth = getAuth();
     const db = getFirestore();
     const userRecord = await auth.createUser({
@@ -23,6 +23,8 @@ export class UserRepository implements IUserRepository {
       email: authInfo.email,
       createdAt: new Date(),
       updatedAt: new Date(),
+      faculty: authInfo.faculty,
+      grade: authInfo.grade,
     };
 
     await db.collection('users').doc(userRecord.uid).set(newUser);
@@ -76,5 +78,26 @@ export class UserRepository implements IUserRepository {
     const auth = getAuth();
     await db.collection('users').doc(id).delete();
     await auth.deleteUser(id);
+  }
+
+  async findByIds(userIds: string[]): Promise<User[]> {
+    if (userIds.length === 0) return [];
+    const db = getFirestore();
+    // Firestoreのinクエリは最大10件までなので分割
+    const chunkSize = 10;
+    const chunks = [];
+    for (let i = 0; i < userIds.length; i += chunkSize) {
+      chunks.push(userIds.slice(i, i + chunkSize));
+    }
+    const users: User[] = [];
+    for (const chunk of chunks) {
+      const snapshot = await db.collection('users').where('id', 'in', chunk).get();
+      snapshot.forEach(doc => {
+        users.push(doc.data() as User);
+      });
+    }
+    // 順序をuserIdsに揃える
+    const userMap = new Map(users.map(u => [u.id, u]));
+    return userIds.map(id => userMap.get(id)).filter((u): u is User => !!u);
   }
 }
