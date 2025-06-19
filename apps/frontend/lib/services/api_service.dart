@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   // ※ベースURLは自身の環境に合わせて変更してください
-  final String _baseUrl = 'http://192.168.1.10:3000/api';
+  final String _baseUrl = 'http://192.168.0.34:3000/api';
 
   Future<bool> register({
     required String userName,
@@ -29,6 +29,28 @@ class ApiService {
     } else {
       print('Failed to register: \\${response.body}');
       return false;
+    }
+  }
+
+  Future<String?> login(String email, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        return body['token'];
+      }
+      return null;
+    } catch (e) {
+      print(e);
+      return null;
     }
   }
 } 

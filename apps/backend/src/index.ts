@@ -23,6 +23,11 @@ app.get('/', (c) => {
     return c.text('Hello Campus Connect API!')
 })
 
+app.get('/test', (c) => {
+    return c.text('Test route is working!')
+  })
+  
+  const api = new Hono()
 // ↓↓↓↓ ルーターを登録 ↓↓↓↓
 app.route('/auth', authRouter);
 app.route('/users', userRouter);
