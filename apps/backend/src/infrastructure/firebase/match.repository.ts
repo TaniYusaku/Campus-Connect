@@ -15,4 +15,14 @@ export class MatchRepository implements IMatchRepository {
 
     await batch.commit();
   }
+
+  async findAll(userId: string): Promise<string[]> {
+    const db = getFirestore();
+    const matchesCol = db.collection('users').doc(userId).collection('matches');
+    const snapshot = await matchesCol.get();
+    if (snapshot.empty) {
+      return [];
+    }
+    return snapshot.docs.map(doc => doc.id);
+  }
 } 
