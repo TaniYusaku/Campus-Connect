@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE settings
+.idea/
+.vscode/
+
+# Firebase
+.firebase/
+firebase.json
+database-debug.log 

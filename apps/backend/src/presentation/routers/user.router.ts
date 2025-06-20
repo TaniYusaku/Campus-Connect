@@ -15,7 +15,7 @@ import type { IBlockRepository } from '../../domain/repositories/block.repositor
 export const userRouter = new Hono();
 const userRepository = new UserRepository();
 const likeRepository: ILikeRepository = new LikeRepository();
-const encounterRepository: IEncounterRepository = new EncounterRepository();
+const encounterRepository = new EncounterRepository();
 const matchRepository: IMatchRepository = new MatchRepository();
 const blockRepository: IBlockRepository = new BlockRepository();
 
@@ -144,4 +144,6 @@ userRouter.delete('/:userId/block', async (c) => {
   const blockedId = c.req.param('userId');
   await blockRepository.delete(blockerId, blockedId);
   return c.json({ message: 'User unblocked successfully' });
-}); 
+});
+
+// ▼▼▼ テスト用のエンドポイントを削除しました ▼▼▼ 

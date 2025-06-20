@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -109,6 +110,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   onPressed: _register,
                   child: const Text('登録する'),
                 ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  );
+                },
+                child: const Text('すでにアカウントをお持ちですか？ ログイン'),
+              ),
               if (_errorMessage != null) ...[
                 const SizedBox(height: 16),
                 Text(_errorMessage!, style: const TextStyle(color: Colors.red)),

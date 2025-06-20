@@ -32,3 +32,6 @@ lerna-debug.log*
 
 # service account key
 serviceAccountKey.json
+
+# Build output
+dist/
