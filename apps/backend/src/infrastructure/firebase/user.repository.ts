@@ -1,6 +1,6 @@
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
-import type { IUserRepository, UpdatableUserInfo } from '../../domain/repositories/user.repository';
+import type { IUserRepository, UpdatableUserInfo, GeneratedTid } from '../../domain/repositories/user.repository';
 import type { User } from '../../domain/entities/user.entity';
 import axios from 'axios';
 
@@ -99,5 +99,19 @@ export class UserRepository implements IUserRepository {
     // 順序をuserIdsに揃える
     const userMap = new Map(users.map(u => [u.id, u]));
     return userIds.map(id => userMap.get(id)).filter((u): u is User => !!u);
+  }
+
+  async saveTIDs(uid: string, tids: GeneratedTid[]): Promise<void> {
+    const db = getFirestore();
+    const batch = db.batch();
+    const tidsCol = db.collection('users').doc(uid).collection('tids');
+    tids.forEach(tidObj => {
+      const docRef = tidsCol.doc(tidObj.tid);
+      batch.set(docRef, {
+        tid: tidObj.tid,
+        expiresAt: tidObj.expiresAt,
+      });
+    });
+    await batch.commit();
   }
 }

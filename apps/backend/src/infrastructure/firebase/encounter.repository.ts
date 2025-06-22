@@ -122,4 +122,31 @@ return sortedUsers;
 
 }
 
+async findUidsByTids(tids: string[]): Promise<string[]> {
+  if (tids.length === 0) return [];
+  const db = getFirestore();
+  const now = new Date();
+  // Firestoreのinクエリは最大10件なので分割
+  const chunkSize = 10;
+  const chunks = [];
+  for (let i = 0; i < tids.length; i += chunkSize) {
+    chunks.push(tids.slice(i, i + chunkSize));
+  }
+  const uids = new Set<string>();
+  for (const chunk of chunks) {
+    const snapshot = await db.collectionGroup('tids')
+      .where('tid', 'in', chunk)
+      .where('expiresAt', '>', now)
+      .get();
+    snapshot.forEach(doc => {
+      // 親ドキュメントのパスからUIDを抽出
+      const userPath = doc.ref.parent.parent;
+      if (userPath) {
+        uids.add(userPath.id);
+      }
+    });
+  }
+  return Array.from(uids);
+}
+
 }

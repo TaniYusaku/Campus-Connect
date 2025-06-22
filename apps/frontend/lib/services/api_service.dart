@@ -6,7 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiService {
   final _storage = const FlutterSecureStorage();
   // ※ベースURLは自身の環境に合わせて変更してください
-  final String _baseUrl = 'http://localhost:3000/api';
+  final String _baseUrl = 'http://192.168.0.34:8787/api';
 
   Future<bool> register({
     required String userName,

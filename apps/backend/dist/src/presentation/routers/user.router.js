@@ -7,6 +7,7 @@ import { LikeRepository } from '../../infrastructure/firebase/like.repository';
 import { EncounterRepository } from '../../infrastructure/firebase/encounter.repository';
 import { MatchRepository } from '../../infrastructure/firebase/match.repository';
 import { BlockRepository } from '../../infrastructure/firebase/block.repository';
+import { v4 as uuidv4 } from 'uuid';
 export const userRouter = new Hono();
 const userRepository = new UserRepository();
 const likeRepository = new LikeRepository();
@@ -122,3 +123,23 @@ userRouter.delete('/:userId/block', async (c) => {
     await blockRepository.delete(blockerId, blockedId);
     return c.json({ message: 'User unblocked successfully' });
 });
+// POST /api/users/me/tids
+userRouter.post('/me/tids', async (c) => {
+    const userId = c.get('user').uid;
+    const now = new Date();
+    const tids = [];
+    for (let i = 0; i < 96; i++) {
+        const tid = uuidv4();
+        const expiresAt = new Date(now.getTime() + 15 * 60 * 1000 * (i + 1)); // 15分ごと
+        tids.push({ tid, expiresAt });
+    }
+    try {
+        await userRepository.saveTIDs(userId, tids);
+        return c.json(tids.map(t => t.tid), 201);
+    }
+    catch (error) {
+        console.error('Failed to generate TIDs:', error);
+        return c.json({ error: 'Failed to generate TIDs' }, 500);
+    }
+});
+// ▼▼▼ テスト用のエンドポイントを削除しました ▼▼▼ 

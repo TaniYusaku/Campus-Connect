@@ -86,4 +86,17 @@ export class UserRepository {
         const userMap = new Map(users.map(u => [u.id, u]));
         return userIds.map(id => userMap.get(id)).filter((u) => !!u);
     }
+    async saveTIDs(uid, tids) {
+        const db = getFirestore();
+        const batch = db.batch();
+        const tidsCol = db.collection('users').doc(uid).collection('tids');
+        tids.forEach(tidObj => {
+            const docRef = tidsCol.doc(tidObj.tid);
+            batch.set(docRef, {
+                tid: tidObj.tid,
+                expiresAt: tidObj.expiresAt,
+            });
+        });
+        await batch.commit();
+    }
 }

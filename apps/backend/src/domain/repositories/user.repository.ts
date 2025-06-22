@@ -13,6 +13,8 @@ export interface IUserRepository {
   // ↓↓↓↓ 以下を追記 ↓↓↓↓
   delete(id: string): Promise<void>;
   findByIds(userIds: string[]): Promise<User[]>;
+  // TIDリストを保存する
+  saveTIDs(uid: string, tids: GeneratedTid[]): Promise<void>;
 }
 
 // 更新可能なユーザー情報の型
@@ -24,4 +26,10 @@ export type UpdatableUserInfo = {
   bio?: string;
   hobbies?: string[];
   snsLinks?: { [key: string]: string };
+};
+
+// TID生成・保存用型
+export type GeneratedTid = {
+  tid: string;
+  expiresAt: Date;
 };

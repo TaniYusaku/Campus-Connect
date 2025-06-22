@@ -4,4 +4,5 @@ import type { User } from '../entities/user.entity';
 export interface IEncounterRepository {
   create(userId: string, encounteredUserId: string): Promise<boolean>;
   findRecentEncounteredUsers(userId: string): Promise<User[]>;
+  findUidsByTids(tids: string[]): Promise<string[]>;
 } 

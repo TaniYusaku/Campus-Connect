@@ -8,6 +8,12 @@ const encounterSchema = z.object({
   encounteredUserId: z.string().min(1),
 });
 
+const encounterTidSchema = z.array(z.object({
+  tid: z.string().min(1),
+  rssi: z.number(),
+  timestamp: z.number(),
+}));
+
 export const encounterRouter = new Hono();
 const encounterRepository = new EncounterRepository();
 
@@ -17,22 +23,24 @@ encounterRouter.use('/*', authMiddleware);
 // POST /api/encounters
 encounterRouter.post(
   '/',
-  zValidator('json', encounterSchema),
+  zValidator('json', encounterTidSchema),
   async (c) => {
     const user = c.get('user');
-    const { encounteredUserId } = c.req.valid('json');
-
-    // 自分自身とのすれ違いは記録しない
-    if (user.uid === encounteredUserId) {
-      return c.json({ error: 'Cannot encounter yourself' }, 400);
-    }
-
+    const scanResults = c.req.valid('json');
+    const tids = scanResults.map((item: any) => item.tid);
     try {
-      const matchCreated = await encounterRepository.create(user.uid, encounteredUserId);
-      return c.json({ message: 'Encounter recorded successfully', matchCreated }, 201);
+      // 有効なTIDからUIDを特定
+      const encounteredUids = await encounterRepository.findUidsByTids(tids);
+      // 自分自身との遭遇は除外
+      const filteredUids = encounteredUids.filter(uid => uid !== user.uid);
+      // 遭遇記録を作成
+      for (const encounteredUserId of filteredUids) {
+        await encounterRepository.create(user.uid, encounteredUserId);
+      }
+      return c.json({ message: 'Encounters recorded successfully' }, 201);
     } catch (error) {
-      console.error('Failed to record encounter:', error);
-      return c.json({ error: 'Failed to record encounter' }, 500);
+      console.error('Failed to record encounters:', error);
+      return c.json({ error: 'Failed to record encounters' }, 500);
     }
   }
 ); 

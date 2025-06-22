@@ -11,6 +11,8 @@ import { BlockRepository } from '../../infrastructure/firebase/block.repository'
 import type { IEncounterRepository } from '../../domain/repositories/encounter.repository';
 import type { IMatchRepository } from '../../domain/repositories/match.repository';
 import type { IBlockRepository } from '../../domain/repositories/block.repository';
+import { v4 as uuidv4 } from 'uuid';
+import type { GeneratedTid } from '../../domain/repositories/user.repository';
 
 export const userRouter = new Hono();
 const userRepository = new UserRepository();
@@ -144,6 +146,25 @@ userRouter.delete('/:userId/block', async (c) => {
   const blockedId = c.req.param('userId');
   await blockRepository.delete(blockerId, blockedId);
   return c.json({ message: 'User unblocked successfully' });
+});
+
+// POST /api/users/me/tids
+userRouter.post('/me/tids', async (c) => {
+  const userId = c.get('user').uid;
+  const now = new Date();
+  const tids: GeneratedTid[] = [];
+  for (let i = 0; i < 96; i++) {
+    const tid = uuidv4();
+    const expiresAt = new Date(now.getTime() + 15 * 60 * 1000 * (i + 1)); // 15分ごと
+    tids.push({ tid, expiresAt });
+  }
+  try {
+    await userRepository.saveTIDs(userId, tids);
+    return c.json(tids.map(t => t.tid), 201);
+  } catch (error) {
+    console.error('Failed to generate TIDs:', error);
+    return c.json({ error: 'Failed to generate TIDs' }, 500);
+  }
 });
 
 // ▼▼▼ テスト用のエンドポイントを削除しました ▼▼▼ 
