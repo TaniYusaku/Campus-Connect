@@ -2,11 +2,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:frontend/models/user.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 
 class ApiService {
   final _storage = const FlutterSecureStorage();
   // ※ベースURLは自身の環境に合わせて変更してください
-  final String _baseUrl = 'http://localhost:3000/api';
+  final String _baseUrl = 'http://192.168.2.1:8088/api';
 
   Future<bool> register({
     required String userName,
@@ -57,14 +58,25 @@ class ApiService {
     }
   }
 
+  // 認証ヘッダーを動的に生成するプライベートなヘルパーメソッドを追加
+  Future<Map<String, String>> _getAuthHeaders() async {
+    final user = auth.FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('User not logged in');
+    }
+    // trueを指定してトークンを強制リフレッシュ
+    final idToken = await user.getIdToken(true);
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $idToken',
+    };
+  }
+
   Future<List<User>> getEncounters() async {
-    final token = await _storage.read(key: 'auth_token');
+    final headers = await _getAuthHeaders();
     final response = await http.get(
       Uri.parse('$_baseUrl/users/encounters'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+      headers: headers,
     );
 
     if (response.statusCode == 200) {

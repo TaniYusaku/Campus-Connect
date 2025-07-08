@@ -33,10 +33,12 @@ app.route('/auth', authRouter);
 app.route('/users', userRouter);
 app.route('/encounters', encounterRouter);
 
-const port = 3000
+const port = 8088
+
 console.log(`Server is running on port ${port}`)
 
 serve({
     fetch: app.fetch,
-    port
+    port: port,
+    hostname: '0.0.0.0',
 })

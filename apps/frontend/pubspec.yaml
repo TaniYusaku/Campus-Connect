@@ -37,6 +37,7 @@ dependencies:
   flutter_riverpod: ^2.5.1
   http: ^1.4.0
   flutter_secure_storage: ^9.2.4
+  firebase_auth: ^5.6.1
 
 dev_dependencies:
   flutter_test:

@@ -152,7 +152,6 @@
 				AD3DB2C1C24509D38A82623F /* Pods-RunnerTests.release.xcconfig */,
 				32B1AD736ADB75C744D169E9 /* Pods-RunnerTests.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -661,7 +660,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.frontend;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.frontend.yusaku;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
