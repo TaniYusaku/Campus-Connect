@@ -38,6 +38,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<bool> register({
+    required String userName,
+    required String email,
+    required String password,
+    String? faculty,
+    int? grade,
+  }) async {
+    final apiService = _ref.read(apiServiceProvider);
+    final success = await apiService.register(
+      userName: userName,
+      email: email,
+      password: password,
+      faculty: faculty ?? '',
+      grade: grade ?? 0,
+    );
+    if (success) {
+      // 登録に成功したら、そのままログインする
+      return await login(email, password);
+    }
+    return false;
+  }
+
   Future<void> logout() async {
     await _storage.delete(key: 'auth_token');
     state = AuthState.unauthenticated;

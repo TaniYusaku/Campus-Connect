@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:frontend/models/user.dart';
-import 'package:frontend/services/api_service.dart';
+import 'package:campus_connect_app/models/user.dart';
+import 'package:campus_connect_app/services/api_service.dart';
 
 final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/auth_provider.dart';
 import 'login_screen.dart';
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _userNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -18,8 +19,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _gradeController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
-
-  final ApiService _apiService = ApiService();
 
   @override
   void dispose() {
@@ -33,30 +32,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-    final success = await _apiService.register(
-      userName: _userNameController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      faculty: _facultyController.text.trim(),
-      grade: int.tryParse(_gradeController.text.trim()) ?? 1,
-    );
-    setState(() {
-      _isLoading = false;
-    });
-    if (success) {
-      // TODO: ホーム画面やログイン画面への遷移処理を追加
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('登録に成功しました')),
-      );
-    } else {
+
+    final success = await ref.read(authProvider.notifier).register(
+          userName: _userNameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          faculty: _facultyController.text.trim(),
+          grade: int.tryParse(_gradeController.text.trim()) ?? 1,
+        );
+
+    // `mounted` を使って、ウィジェットがまだツリーに存在するか確認
+    if (!mounted) return;
+
+    if (!success) {
       setState(() {
         _errorMessage = '登録に失敗しました。メールアドレスの重複やネットワークエラーの可能性があります。';
+        _isLoading = false;
       });
     }
+    // 成功した場合、isLoadingはfalseにしなくても画面が切り替わるのでそのままでOK
   }
 
   @override

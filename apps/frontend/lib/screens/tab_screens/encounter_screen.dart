@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:frontend/providers/encounter_provider.dart';
+import 'package:campus_connect_app/providers/encounter_provider.dart';
 
 class EncounterScreen extends ConsumerWidget {
   const EncounterScreen({super.key});

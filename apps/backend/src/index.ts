@@ -7,6 +7,7 @@ import serviceAccount from '../serviceAccountKey.json' assert { type: 'json' }
 import { authRouter } from './presentation/routers/auth.router'
 import { userRouter } from './presentation/routers/user.router'
 import { encounterRouter } from './presentation/routers/encounter.router'
+import temporaryIdRoute from './routes/auth/temporary-id';
 
 try {
     initializeApp({
@@ -32,6 +33,7 @@ app.get('/test', (c) => {
 app.route('/auth', authRouter);
 app.route('/users', userRouter);
 app.route('/encounters', encounterRouter);
+app.route('/auth/temporary-id', temporaryIdRoute);
 
 const port = 8088
 

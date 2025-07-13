@@ -45,5 +45,15 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>近くにいるユーザーとすれ違うためにBluetoothを使用します。</string>
+    <key>NSBluetoothPeripheralUsageDescription</key>
+    <string>近くにいるユーザーにあなたの存在を知らせるためにBluetoothを使用します。</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>すれ違い機能の精度向上のために位置情報を使用します。</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>近くのユーザーにあなたを知らせるためにBluetoothを利用します。</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>アプリがバックグラウンドの状態でも、近くのユーザーとすれ違うためにBluetoothを利用します。</string>
 </dict>
 </plist>
