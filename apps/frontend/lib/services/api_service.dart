@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart' as auth;
 class ApiService {
   final _storage = const FlutterSecureStorage();
   // ※ベースURLは自身の環境に合わせて変更してください
-  final String _baseUrl = 'http://192.168.2.1:8088/api';
+  final String _baseUrl = 'http://localhost:8088/api';
 
   Future<bool> register({
     required String userName,
