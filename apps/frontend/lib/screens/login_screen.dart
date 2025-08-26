@@ -4,9 +4,6 @@ import '../services/api_service.dart'; // ApiServiceをインポート
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // インポート
 import '../providers/auth_provider.dart';
 
-// ApiServiceのインスタンスをグローバルに提供
-final apiServiceProvider = Provider((ref) => ApiService());
-
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -101,4 +98,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-} 
+}

@@ -1,93 +1,140 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart'; // ValueNotifierのために追加
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:campus_connect_app/providers/encounter_provider.dart';
 import 'package:campus_connect_app/repositories/auth_repository.dart';
 import 'package:campus_connect_app/repositories/encounter_repository.dart';
 import 'package:campus_connect_app/services/ble_service_interface.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 // Providerの定義
-final bleCoordinatorServiceProvider = Provider((ref) {
+final bleCoordinatorServiceProvider = Provider.autoDispose((ref) {
   final authRepository = ref.watch(authRepositoryProvider);
   final encounterRepository = ref.watch(encounterRepositoryProvider);
-  return BleCoordinatorService(authRepository, encounterRepository, ref);
+  // refを渡す
+  final service = BleCoordinatorService(ref, authRepository, encounterRepository);
+  ref.onDispose(() {
+    service.dispose();
+  });
+  return service;
 });
 
 class BleCoordinatorService {
+  final Ref _ref;
   final AuthRepository _authRepository;
   final EncounterRepository _encounterRepository;
-  final Ref _ref;
   final BleServiceInterface _bleService = BleServiceInterface();
   StreamSubscription? _deviceFoundSubscription;
+  StreamSubscription? _bleStateSubscription;
 
-  // ユーザーが設定画面に飛ばされたかどうかをUIに通知するためのNotifier
+  // UIに状態を通知するためのNotifier
   final ValueNotifier<bool> userWasSentToSettingsNotifier = ValueNotifier(false);
+  final ValueNotifier<BleState> bleStateNotifier = ValueNotifier(BleState.unknown);
+  final ValueNotifier<bool> isServiceRunningNotifier = ValueNotifier(false);
 
-  BleCoordinatorService(this._authRepository, this._encounterRepository, this._ref);
+  BleCoordinatorService(this._ref, this._authRepository, this._encounterRepository) {
+    // BLE状態の監視を開始
+    _bleStateSubscription = _bleService.onBleStateChanged.listen((state) {
+      bleStateNotifier.value = state;
+      print('BLE state changed: $state');
+      // BLEがオフ、または権限がない場合はサービスを停止
+      if (state == BleState.poweredOff || state == BleState.unauthorized) {
+        if (isServiceRunningNotifier.value) {
+          stop();
+          print('BLE service stopped due to state change: $state');
+        }
+      }
+    });
+  }
 
-  /// BLE関連のパーミッションを要求する
-  /// 権限が許可されなかった場合、またはpermanentlyDeniedの場合は例外を投げる
-  Future<void> _requestPermissions() async {
-    print("Requesting permissions sequentially...");
+  void dispose() {
+    stop();
+    _bleStateSubscription?.cancel();
+    userWasSentToSettingsNotifier.dispose();
+    bleStateNotifier.dispose();
+    isServiceRunningNotifier.dispose();
+  }
 
-    final scanStatus = await Permission.bluetoothScan.request();
-    print('[Permission] Permission.bluetoothScan: ${scanStatus.toString()}');
-
-    final advertiseStatus = await Permission.bluetoothAdvertise.request();
-    print('[Permission] Permission.bluetoothAdvertise: ${advertiseStatus.toString()}');
-
-    // 1つでも「永久に拒否」があれば、アプリの設定画面を開く
-    if (scanStatus.isPermanentlyDenied || advertiseStatus.isPermanentlyDenied) {
-      print('Permissions are permanently denied. Opening app settings...');
-      userWasSentToSettingsNotifier.value = true; // UIに通知
-      await openAppSettings();
-      throw Exception('Bluetooth permissions permanently denied. User sent to settings.');
+  /// 個別の権限を要求するヘルパーメソッド
+  Future<PermissionStatus> _checkAndRequestPermission(Permission permission) async {
+    var status = await permission.status;
+    if (status.isDenied) {
+      status = await permission.request();
     }
+    return status;
+  }
 
-    // すべてのパーミッションが許可されているかチェック
-    final bool allGranted = scanStatus.isGranted && advertiseStatus.isGranted;
-    if (!allGranted) {
-      print('Required Bluetooth permissions were not granted.');
-      throw Exception('Required Bluetooth permissions were not granted.');
+  /// BLE関連のパーミッションを一つずつ要求し、結果を返す
+  Future<bool> requestPermissions() async {
+    final permissions = [
+      Permission.bluetoothScan,
+      Permission.bluetoothAdvertise,
+      Permission.bluetoothConnect,
+    ];
+
+    for (final permission in permissions) {
+      final status = await _checkAndRequestPermission(permission);
+      if (status.isPermanentlyDenied) {
+        userWasSentToSettingsNotifier.value = true;
+        await openAppSettings();
+        return false;
+      }
+      if (!status.isGranted) {
+        return false;
+      }
     }
-    userWasSentToSettingsNotifier.value = false; // 権限が許可されたのでUIの状態をリセット
+    userWasSentToSettingsNotifier.value = false;
+    return true;
   }
 
   /// すれ違い通信サービスを開始する
   Future<void> start() async {
+    if (isServiceRunningNotifier.value) {
+      print("BLE service is already running.");
+      return;
+    }
+
+    // BLEがオンになっているか確認
+    if (bleStateNotifier.value != BleState.poweredOn) {
+        print("Cannot start BLE service: Bluetooth is not powered on.");
+        return;
+    }
+
     print('Starting BLE coordinator service...');
     try {
-      // 0. パーミッションの確認と要求
-      await _requestPermissions(); // 権限がなければここで例外が投げられる
-
-      // 1. バックエンドから一時IDを取得
       final tempId = await _authRepository.getTemporaryId();
       if (tempId == null) {
         throw Exception('Failed to get temporary ID from backend.');
       }
 
-      // 2. ネイティブのBLEサービスを開始
       await _bleService.startBleService(tempId);
       print('BLE service started with tempId: $tempId');
+      isServiceRunningNotifier.value = true;
 
-      // 3. デバイス発見イベントの購読を開始
-      _deviceFoundSubscription?.cancel(); // 既存の購読はキャンセル
-      _deviceFoundSubscription = _bleService.onDeviceFound.listen((foundTempId) {
+      _deviceFoundSubscription?.cancel();
+      _deviceFoundSubscription = _bleService.onDeviceFound.listen((foundTempId) async {
         print('Device found with tempId: $foundTempId');
-        // 4. バックエンドにすれ違いを報告
-        _encounterRepository.recordEncounter(foundTempId);
+        final encounteredUser = await _encounterRepository.recordEncounter(foundTempId);
+        if (encounteredUser != null) {
+          _ref.read(encounterProvider.notifier).addNewEncounter(encounteredUser);
+          // TODO: UIにSnackBarなどで通知する
+        }
       });
     } catch (e) {
       print('Failed to start BLE coordinator service: $e');
-      rethrow; // エラーを呼び出し元に再スロー
+      isServiceRunningNotifier.value = false;
+      rethrow;
     }
   }
 
   /// すれ違い通信サービスを停止する
   void stop() {
+    if (!isServiceRunningNotifier.value) return;
     _bleService.stopBleService();
     _deviceFoundSubscription?.cancel();
+    isServiceRunningNotifier.value = false;
     print('BLE coordinator service stopped.');
   }
 }
+
  

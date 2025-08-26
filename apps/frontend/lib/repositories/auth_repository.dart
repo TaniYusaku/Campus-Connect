@@ -1,25 +1,28 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:campus_connect_app/services/api_service.dart';
 
-final authRepositoryProvider = Provider((ref) => AuthRepository());
+// このリポジトリは、認証状態そのものではなく、
+// 認証が必要なAPI（一時ID取得など）へのアクセスを抽象化するために存在します。
+
+final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
+
+final authRepositoryProvider = Provider(
+  (ref) => AuthRepository(ref.watch(apiServiceProvider)),
+);
 
 class AuthRepository {
-  // ... 既存のログイン、登録処理
+  final ApiService _apiService;
+
+  AuthRepository(this._apiService);
 
   /// バックエンドから一時IDを取得する
   Future<String?> getTemporaryId() async {
     try {
-      // TODO: 認証トークン付きで POST /api/auth/temporary-id を呼び出す
-      // 例: final response = await dio.post('/auth/temporary-id');
-      // if (response.statusCode == 200) {
-      //   return response.data['tempId'];
-      // }
-      // return null;
-      // 以下はダミー実装
-      await Future.delayed(const Duration(seconds: 1));
-      return 'dummy-temp-id-from-backend'; // ダミーIDを返す
+      // ApiService経由で、認証情報付きで一時IDを取得する
+      final tempId = await _apiService.getTemporaryId();
+      return tempId;
     } catch (e) {
-      print('Failed to get temporary ID: $e');
+      print('Failed to get temporary ID in AuthRepository: $e');
       return null;
     }
   }

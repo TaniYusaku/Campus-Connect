@@ -1,13 +1,15 @@
 import Foundation
 import CoreBluetooth
 
-class BleService: NSObject, CBCentralManagerDelegate, CBPeripheralManagerDelegate, FlutterStreamHandler {
+class BleService: NSObject, CBCentralManagerDelegate, CBPeripheralManagerDelegate {
     // CentralManagerとPeripheralManagerのインスタンス
     private var centralManager: CBCentralManager!
     private var peripheralManager: CBPeripheralManager!
 
     // Flutterにイベントを送信するためのEventSink
-    private var deviceFoundEventSink: FlutterEventSink?
+    // AppDelegateに定義されたStreamHandlerから設定される
+    var deviceFoundEventSink: FlutterEventSink?
+    var bleStateEventSink: FlutterEventSink?
 
     // シングルトンインスタンス
     static let shared = BleService()
@@ -22,9 +24,9 @@ class BleService: NSObject, CBCentralManagerDelegate, CBPeripheralManagerDelegat
 
     private override init() {
         super.init()
-        let queue = DispatchQueue(label: "com.example.campus_connect.ble_queue", qos: .background)
-        centralManager = CBCentralManager(delegate: self, queue: queue)
-        peripheralManager = CBPeripheralManager(delegate: self, queue: queue)
+        // デリゲートメソッドがメインスレッドで呼ばれるように、queueにnilを渡す
+        centralManager = CBCentralManager(delegate: self, queue: nil)
+        peripheralManager = CBPeripheralManager(delegate: self, queue: nil)
     }
 
     // サービス開始
@@ -32,8 +34,14 @@ class BleService: NSObject, CBCentralManagerDelegate, CBPeripheralManagerDelegat
         print("BleService: start called with tempId: \(tempId)")
         self.isStarted = true
         self.currentTempId = tempId
-        startScanning()
-        startAdvertising()
+        // 状態更新デリゲートが呼ばれるので、そこでスキャン・アドバタイズが開始される
+        // 明示的に呼ぶ必要はないが、既にPowerOnの場合は即時開始するために呼ぶ
+        if centralManager.state == .poweredOn {
+            startScanning()
+        }
+        if peripheralManager.state == .poweredOn {
+            startAdvertising()
+        }
     }
 
     // サービス停止
@@ -81,11 +89,44 @@ class BleService: NSObject, CBCentralManagerDelegate, CBPeripheralManagerDelegat
         }
     }
 
+    // 現在のBLE状態をFlutterに送信する
+    func sendCurrentBleState() {
+        guard let central = centralManager else { return }
+        let stateStr: String
+        switch central.state {
+        case .poweredOn:
+            stateStr = "poweredOn"
+        case .poweredOff:
+            stateStr = "poweredOff"
+        case .unauthorized:
+            stateStr = "unauthorized"
+        default:
+            stateStr = "unknown"
+        }
+        // メインスレッドから送信
+        DispatchQueue.main.async {
+            self.bleStateEventSink?(stateStr)
+        }
+    }
+
     // --- Delegateメソッド ---
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         print("BleService: CentralManager state updated to \(central.state.rawValue)")
-        if central.state == .poweredOn {
+        let stateStr: String
+        switch central.state {
+        case .poweredOn:
+            stateStr = "poweredOn"
             startScanning()
+        case .poweredOff:
+            stateStr = "poweredOff"
+        case .unauthorized:
+            stateStr = "unauthorized"
+        default:
+            stateStr = "unknown"
+        }
+        // メインスレッドから送信
+        DispatchQueue.main.async {
+            self.bleStateEventSink?(stateStr)
         }
     }
 
@@ -103,8 +144,10 @@ class BleService: NSObject, CBCentralManagerDelegate, CBPeripheralManagerDelegat
            let tempIdData = serviceData[serviceUUID],
            let foundTempId = String(data: tempIdData, encoding: .utf8) {
             print("BleService: Discovered device with tempId: \(foundTempId) RSSI: \(RSSI)")
-            // EventChannelを通じてFlutterに通知
-            deviceFoundEventSink?(foundTempId)
+            // メインスレッドから送信
+            DispatchQueue.main.async {
+                self.deviceFoundEventSink?(foundTempId)
+            }
         }
     }
     
@@ -114,18 +157,5 @@ class BleService: NSObject, CBCentralManagerDelegate, CBPeripheralManagerDelegat
         } else {
             print("BleService: Successfully started advertising.")
         }
-    }
-
-    // --- FlutterStreamHandlerメソッド ---
-    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        print("BleService: onListen called")
-        self.deviceFoundEventSink = events
-        return nil
-    }
-
-    func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        print("BleService: onCancel called")
-        self.deviceFoundEventSink = nil
-        return nil
     }
 } 

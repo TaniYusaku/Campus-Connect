@@ -26,8 +26,21 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>アプリがバックグラウンドにある場合でも、すれ違い機能のためにBluetoothを利用します。</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>「すれ違い機能」のために、あなたのデバイスを近くのユーザーに知らせます。</string>
+	<key>NSBluetoothWhenInUseUsageDescription</key>
+	<string>「すれ違い機能」のために、近くのデバイスを探して通信します。</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>すれ違い機能の精度向上のために位置情報を利用します。</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<string>bluetooth-peripheral</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -45,12 +58,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-
-	<!-- ▼▼▼ BLE関連の権限設定（フォアグラウンド限定）▼▼▼ -->
-	<key>NSBluetoothWhenInUseUsageDescription</key>
-	<string>「すれ違い機能」のために、近くのデバイスを探して通信します。</string>
-	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>「すれ違い機能」のために、あなたのデバイスを近くのユーザーに知らせます。</string>
-	<!-- ▲▲▲ BLE関連の権限設定 ▲▲▲ -->
 </dict>
 </plist>
