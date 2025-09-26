@@ -61,7 +61,10 @@
 
 * **技術スタック**
     * **UI**: Flutter (Dart)
-    * **BLE通信**: Swift/Kotlin (Platform Channel経由)
+* **BLE通信**: Flutterプラグイン利用（v0）
+    * セントラル: flutter_blue_plus（スキャン主体）
+    * ペリフェラル: flutter_ble_peripheral（必要に応じて後続で検討）
+    * 将来: バックグラウンド動作や省電力最適化は段階的に対応
     * **バックエンド**: Firebase
 * **プライバシー設計**
     * BLE通信ではtempID以外の個人情報を一切送信しません。

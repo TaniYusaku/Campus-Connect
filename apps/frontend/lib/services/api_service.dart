@@ -5,8 +5,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
   final _storage = const FlutterSecureStorage();
-  // ※ベースURLは自身の環境に合わせて変更してください
-  final String _baseUrl = 'http://localhost:3000/api';
+  // ベースURLは --dart-define で上書き可能（例: --dart-define=API_BASE_URL=http://192.168.0.79:3000/api）
+  final String _baseUrl = const String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://192.168.0.79:3000/api',
+  );
 
   Future<bool> register({
     required String userName,
@@ -73,6 +76,35 @@ class ApiService {
       return users;
     } else {
       throw Exception('Failed to load encounters');
+    }
+  }
+
+  // 観測したアドバタイズIDをサーバーへ送信（仮API: POST /api/encounters/observe）
+  Future<void> postObservation({
+    required String observedId,
+    required int rssi,
+    DateTime? timestamp,
+  }) async {
+    try {
+      final token = await _storage.read(key: 'auth_token');
+      final ts = (timestamp ?? DateTime.now()).toUtc().toIso8601String();
+      final response = await http.post(
+        Uri.parse('$_baseUrl/encounters/observe'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'observedId': observedId,
+          'rssi': rssi,
+          'timestamp': ts,
+        }),
+      );
+      if (response.statusCode >= 400) {
+        print('postObservation failed: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      print('postObservation error: $e');
     }
   }
 } 

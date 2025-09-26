@@ -19,6 +19,12 @@ try {
 
 const app = new Hono().basePath('/api')
 
+// simple request logger for debugging connectivity
+app.use('*', async (c, next) => {
+  console.log(`${c.req.method} ${c.req.path}`)
+  return next()
+})
+
 app.get('/', (c) => {
     return c.text('Hello Campus Connect API!')
 })
@@ -34,9 +40,11 @@ app.route('/users', userRouter);
 app.route('/encounters', encounterRouter);
 
 const port = 3000
-console.log(`Server is running on port ${port}`)
+console.log(`Server is running on http://0.0.0.0:${port}`)
 
 serve({
     fetch: app.fetch,
-    port
+    port,
+    // Bind to all interfaces so physical devices can reach the server
+    hostname: '0.0.0.0',
 })

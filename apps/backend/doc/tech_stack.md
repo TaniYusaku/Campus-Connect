@@ -104,21 +104,27 @@ Firestoreセキュリティルールを用いて、ユーザーが自身のデ�
 
 #### **6. サーバーロジック（API）設計**
 
-**【このセクションは現在未定義です】**
+バックエンドは Node.js + Hono で実装済み。Firebase Admin SDK を利用し、Auth/Firestore を操作する。
 
-クライアントからの要求に応じてビジネスロジックを実行するためのAPI群。以下に、要件定義書（`backend_requirements.md`）から洗い出された、定義が必要なAPIの一覧を示す。
+- ベースパス: `/api`
+- フレームワーク: Hono (`@hono/node-server`)
+- 認証: Firebase ID トークンを Bearer で検証
 
-* **ユーザープロフィールの取得・更新**:
-    * `GET /users/me`
-    * `PUT /users/me`
-* **すれ違い情報の記録**:
-    * `POST /encounters`
-* **アクション（いいね、ブロック等）**:
-    * `POST /actions/like`
-    * `POST /actions/block`
-    * `POST /actions/unmatch`
-* **各種リストの取得**:
-    * `GET /list/encounter`
-    * `GET /list/match`
-    * `GET /list/like`
+実装済みの主なエンドポイント（2025-09 現在）
+- `POST /api/auth/register` ユーザー登録（Auth + Firestore）
+- `POST /api/auth/login` Firebase REST 経由でサインインし ID トークン発行
+- `GET /api/users/me` サインイン中ユーザー取得
+- `PUT /api/users/me` プロフィール更新
+- `DELETE /api/users/me` アカウント削除
+- `GET /api/users/encounters` 最近すれ違い一覧（ブロック除外）
+- `POST /api/encounters` すれ違い記録（相互いいねならマッチ作成）
+- `POST /api/users/:userId/like` いいね登録
+- `GET /api/users/friends` マッチ（友達）一覧
+- `GET /api/users/blocked` ブロック済みユーザー一覧
+- `POST /api/users/:userId/block` / `DELETE /api/users/:userId/block` ブロック/解除
 
+未実装/要検討（要件との差分）
+- `DELETE /users/{userId}/like` いいね取り消し
+- `PUT /users/me/device` デバイストークン登録
+- `GET /users/{userId}` 他者プロフィール取得（公開情報のみ）
+- ページネーション（encounters/friends/blocked 一覧）
