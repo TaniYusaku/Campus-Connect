@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:frontend/models/user.dart';
+import 'dart:async';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class RegisterResult {
@@ -19,8 +20,44 @@ class ApiService {
   // ベースURLは --dart-define で上書き可能（例: --dart-define=API_BASE_URL=http://192.168.0.79:3000/api）
   final String _baseUrl = const String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.111.145:3000/api',
+    defaultValue: 'http://192.168.11.24:3000/api',
   );
+
+  // Concurrency guard for refresh
+  Future<String?>? _refreshing;
+
+  // Helper: parse expiresIn (seconds) and persist absolute expiry time (ms epoch)
+  Future<void> _saveExpiryFromSeconds(dynamic expiresIn) async {
+    try {
+      int seconds;
+      if (expiresIn is int) {
+        seconds = expiresIn;
+      } else {
+        seconds = int.tryParse('$expiresIn') ?? 3600;
+      }
+      // Refresh slightly earlier than actual expiry
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final skew = 30; // seconds
+      final expiresAtMs = nowMs + (seconds - skew).clamp(10, seconds) * 1000;
+      await _storage.write(key: 'auth_expires_at', value: expiresAtMs.toString());
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  // Returns a valid token, proactively refreshing if close to expiry
+  Future<String?> _getValidToken() async {
+    String? token = await _storage.read(key: 'auth_token');
+    final expiresAtStr = await _storage.read(key: 'auth_expires_at');
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final expiresAt = int.tryParse(expiresAtStr ?? '');
+    final needsRefresh = expiresAt != null && nowMs >= (expiresAt - 15 * 1000);
+    if (token != null && needsRefresh) {
+      final refreshed = await _refreshTokenWithLock();
+      if (refreshed != null) token = refreshed;
+    }
+    return token;
+  }
 
   Future<RegisterResult> register({
     required String userName,
@@ -72,11 +109,15 @@ class ApiService {
         final body = jsonDecode(response.body);
         final token = body['token'] as String?;
         final refresh = body['refreshToken'] as String?;
+        final expiresIn = body['expiresIn'];
         if (refresh != null) {
           await _storage.write(key: 'refresh_token', value: refresh);
         }
         if (token != null) {
           await _storage.write(key: 'auth_token', value: token);
+        }
+        if (expiresIn != null) {
+          await _saveExpiryFromSeconds(expiresIn);
         }
         return token;
       }
@@ -241,11 +282,11 @@ class ApiService {
   // 認証付きリクエストを実行。401ならトークンを更新して1回だけリトライ。
   Future<http.Response?> _authorizedRequest(
       Future<http.Response> Function(String token) doRequest) async {
-    String? token = await _storage.read(key: 'auth_token');
+    String? token = await _getValidToken();
     if (token == null) return null;
     http.Response resp = await doRequest(token);
     if (resp.statusCode == 401) {
-      final refreshed = await _refreshToken();
+      final refreshed = await _refreshTokenWithLock();
       if (refreshed != null) {
         token = refreshed;
         resp = await doRequest(token);
@@ -267,11 +308,15 @@ class ApiService {
         final body = jsonDecode(response.body);
         final token = body['token'] as String?;
         final newRefresh = body['refreshToken'] as String?;
+        final expiresIn = body['expiresIn'];
         if (token != null) {
           await _storage.write(key: 'auth_token', value: token);
         }
         if (newRefresh != null) {
           await _storage.write(key: 'refresh_token', value: newRefresh);
+        }
+        if (expiresIn != null) {
+          await _saveExpiryFromSeconds(expiresIn);
         }
         return token;
       } else {
@@ -281,6 +326,20 @@ class ApiService {
     } catch (e) {
       print('refresh error: $e');
       return null;
+    }
+  }
+
+  // Ensure only one refresh runs concurrently
+  Future<String?> _refreshTokenWithLock() async {
+    if (_refreshing != null) {
+      return await _refreshing;
+    }
+    final fut = _refreshToken();
+    _refreshing = fut;
+    try {
+      return await fut;
+    } finally {
+      _refreshing = null;
     }
   }
 }
