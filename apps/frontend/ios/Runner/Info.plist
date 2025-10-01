@@ -49,6 +49,10 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>This app needs local network access to connect to the development server.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>プロフィール写真の選択のためにフォトライブラリへアクセスします。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>プロフィール写真の撮影のためにカメラを使用します。</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

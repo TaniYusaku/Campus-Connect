@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../services/api_service.dart';
-import '../screens/login_screen.dart';
+import '../providers/api_provider.dart';
 
 enum AuthState { checking, authenticated, unauthenticated }
 
@@ -40,6 +39,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     await _storage.delete(key: 'auth_token');
+    await _storage.delete(key: 'refresh_token');
     state = AuthState.unauthenticated;
   }
 } 

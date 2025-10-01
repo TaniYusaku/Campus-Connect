@@ -2,14 +2,40 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/ble_service.dart';
 import '../shared/ble_constants.dart';
-import '../screens/login_screen.dart'; // for apiServiceProvider
+import 'api_provider.dart';
 
 final bleServiceProvider = Provider<BleService>((ref) => BleService());
 
+// 連続スキャンモード（デフォルト: OFF）
+final continuousScanProvider = StateProvider<bool>((ref) => false);
+
 // RSSI しきい値（デフォルト -80dBm）
-final rssiThresholdProvider = StateProvider<int>((ref) => -80);
+// RSSI しきい値（デフォルト -80dBm）を端末に保存して維持
+final rssiThresholdProvider = StateNotifierProvider<RssiThresholdNotifier, int>((ref) {
+  final notifier = RssiThresholdNotifier();
+  notifier.load(); // 非同期で保存値を反映
+  return notifier;
+});
+
+class RssiThresholdNotifier extends StateNotifier<int> {
+  RssiThresholdNotifier() : super(-80);
+  static const _key = 'rssi_threshold';
+  final _storage = const FlutterSecureStorage();
+
+  Future<void> load() async {
+    final saved = await _storage.read(key: _key);
+    final val = int.tryParse(saved ?? '');
+    if (val != null) state = val;
+  }
+
+  Future<void> set(int value) async {
+    state = value;
+    await _storage.write(key: _key, value: value.toString());
+  }
+}
 
 class BleScanState {
   final bool scanning;
@@ -61,6 +87,9 @@ class BleScanNotifier extends StateNotifier<BleScanState> {
   void _handleObservations(List<ScanResult> list) {
     final now = DateTime.now();
     for (final r in list) {
+      // 現在のしきい値未満は送らない
+      final threshold = _ref.read(rssiThresholdProvider);
+      if (r.rssi < threshold) continue;
       final adName = r.advertisementData.advName;
       if (adName.startsWith(kCcLocalNamePrefix)) {
         final observedId = adName.substring(kCcLocalNamePrefix.length);
@@ -83,7 +112,8 @@ class BleScanNotifier extends StateNotifier<BleScanState> {
 
   Future<void> startScan() async {
     if (state.scanning) return;
-    await _service.startScan();
+    final continuous = _ref.read(continuousScanProvider);
+    await _service.startScan(timeout: continuous ? null : const Duration(seconds: 10));
     state = state.copyWith(scanning: true);
     // when scan ends, update flag via onScanResults empty check is not reliable; poll isScanningNow
     // For simplicity, set a timer to reset scanning flag after typical timeout

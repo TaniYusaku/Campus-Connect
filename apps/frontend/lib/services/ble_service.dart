@@ -15,7 +15,7 @@ class BleService {
   Stream<BluetoothAdapterState> get adapterState => FlutterBluePlus.adapterState;
 
   Future<void> startScan({
-    Duration timeout = const Duration(seconds: 10),
+    Duration? timeout, // null = 連続スキャン（タイムアウト無し）
     bool filterCcService = true,
   }) async {
     // Wait for adapter on
@@ -24,12 +24,22 @@ class BleService {
         .first;
 
     if (filterCcService) {
-      await FlutterBluePlus.startScan(
-        timeout: timeout,
-        withServices: [Guid(kCcServiceUuid)],
-      );
+      if (timeout != null) {
+        await FlutterBluePlus.startScan(
+          timeout: timeout,
+          withServices: [Guid(kCcServiceUuid)],
+        );
+      } else {
+        await FlutterBluePlus.startScan(
+          withServices: [Guid(kCcServiceUuid)],
+        );
+      }
     } else {
-      await FlutterBluePlus.startScan(timeout: timeout);
+      if (timeout != null) {
+        await FlutterBluePlus.startScan(timeout: timeout);
+      } else {
+        await FlutterBluePlus.startScan();
+      }
     }
   }
 

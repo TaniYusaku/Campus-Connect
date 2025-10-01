@@ -8,6 +8,12 @@ const encounterSchema = z.object({
   encounteredUserId: z.string().min(1),
 });
 
+const observeSchema = z.object({
+  observedId: z.string().min(1),
+  rssi: z.number(),
+  timestamp: z.string().optional(),
+});
+
 export const encounterRouter = new Hono();
 const encounterRepository = new EncounterRepository();
 
@@ -35,4 +41,14 @@ encounterRouter.post(
       return c.json({ error: 'Failed to record encounter' }, 500);
     }
   }
-); 
+);
+
+// POST /api/encounters/observe
+// 端末が観測した一時IDを送る想定の仮実装（今は受け取りのみ）
+encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) => {
+  const user = c.get('user');
+  const { observedId, rssi, timestamp } = c.req.valid('json');
+  console.log('observe', { reporter: user.uid, observedId, rssi, timestamp });
+  // TODO: observedId -> userId の解決とすれ違い記録ロジックを追加
+  return c.json({ ok: true }, 201);
+});

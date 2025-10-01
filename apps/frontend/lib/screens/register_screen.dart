@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
+import '../providers/auth_provider.dart';
+import 'package:frontend/shared/profile_constants.dart';
 import 'login_screen.dart';
+import 'onboarding_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -14,8 +18,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _userNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _facultyController = TextEditingController();
-  final _gradeController = TextEditingController();
+  String? _selectedFaculty = '未設定';
+  String? _selectedGradeStr = '未設定';
+  String? _selectedGender = '未設定';
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -26,35 +31,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _userNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _facultyController.dispose();
-    _gradeController.dispose();
     super.dispose();
   }
 
-  Future<void> _register() async {
+  Future<void> _register(AuthNotifier authNotifier) async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-    final success = await _apiService.register(
+    // Validate dropdowns
+    if (_selectedFaculty == null || _selectedFaculty == '未設定') {
+      setState(() { _isLoading = false; _errorMessage = '学部を選択してください'; });
+      return;
+    }
+    if (_selectedGradeStr == null || _selectedGradeStr == '未設定') {
+      setState(() { _isLoading = false; _errorMessage = '学年を選択してください'; });
+      return;
+    }
+    if (_selectedGender == null || _selectedGender == '未設定') {
+      setState(() { _isLoading = false; _errorMessage = '性別を選択してください'; });
+      return;
+    }
+    int gradeInt;
+    if (_selectedGradeStr == 'M1') gradeInt = 5;
+    else if (_selectedGradeStr == 'M2') gradeInt = 6;
+    else gradeInt = int.tryParse(_selectedGradeStr!) ?? 1;
+    final result = await _apiService.register(
       userName: _userNameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      faculty: _facultyController.text.trim(),
-      grade: int.tryParse(_gradeController.text.trim()) ?? 1,
+      faculty: _selectedFaculty!,
+      grade: gradeInt,
+      gender: _selectedGender,
     );
     setState(() {
       _isLoading = false;
     });
-    if (success) {
-      // TODO: ホーム画面やログイン画面への遷移処理を追加
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('登録に成功しました')),
-      );
+    if (result.success) {
+      // 登録成功 → 即ログインしてホームへ
+      final loggedIn = await authNotifier
+          .login(_emailController.text.trim(), _passwordController.text);
+      if (loggedIn) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('登録してログインしました')),
+        );
+        // オンボーディング（初回のみ）へ遷移
+        if (!mounted) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('登録は成功しましたが、ログインに失敗しました')),
+        );
+      }
     } else {
       setState(() {
-        _errorMessage = '登録に失敗しました。メールアドレスの重複やネットワークエラーの可能性があります。';
+        _errorMessage = result.message ?? '登録に失敗しました';
       });
     }
   }
@@ -87,28 +123,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 obscureText: true,
                 validator: (value) => value == null || value.length < 6 ? '6文字以上で入力してください' : null,
               ),
-              TextFormField(
-                controller: _facultyController,
-                decoration: const InputDecoration(labelText: '学部'),
-                validator: (value) => value == null || value.isEmpty ? '入力してください' : null,
+              DropdownButtonFormField<String>(
+                value: _selectedFaculty,
+                items: kFacultyOptions.map((f) => DropdownMenuItem<String>(value: f, child: Text(f))).toList(),
+                onChanged: (v) => setState(() => _selectedFaculty = v),
+                validator: (v) => (v == null || v == '未設定') ? '学部は必須です' : null,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                decoration: const InputDecoration(labelText: '学部 (必須)'),
               ),
-              TextFormField(
-                controller: _gradeController,
-                decoration: const InputDecoration(labelText: '学年'),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  final num = int.tryParse(value ?? '');
-                  if (num == null || num < 1) return '正しい学年を入力してください';
-                  return null;
-                },
+              DropdownButtonFormField<String>(
+                value: _selectedGradeStr,
+                items: kGradeOptions.map((g) => DropdownMenuItem<String>(value: g, child: Text(g))).toList(),
+                onChanged: (v) => setState(() => _selectedGradeStr = v),
+                validator: (v) => (v == null || v == '未設定') ? '学年は必須です' : null,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                decoration: const InputDecoration(labelText: '学年 (必須)'),
+              ),
+              DropdownButtonFormField<String>(
+                value: _selectedGender,
+                items: kGenderOptions.map((g) => DropdownMenuItem<String>(value: g, child: Text(g))).toList(),
+                onChanged: (v) => setState(() => _selectedGender = v),
+                validator: (v) => (v == null || v == '未設定') ? '性別は必須です' : null,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                decoration: const InputDecoration(labelText: '性別 (必須)'),
               ),
               const SizedBox(height: 24),
               if (_isLoading)
                 const CircularProgressIndicator()
               else
-                ElevatedButton(
-                  onPressed: _register,
-                  child: const Text('登録する'),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final authNotifier = ref.read(authProvider.notifier);
+                    return ElevatedButton(
+                      onPressed: () => _register(authNotifier),
+                      child: const Text('登録する'),
+                    );
+                  },
                 ),
               TextButton(
                 onPressed: () {

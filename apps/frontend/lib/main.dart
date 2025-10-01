@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/auth_provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/register_screen.dart';
 
@@ -18,7 +20,7 @@ class MyApp extends ConsumerWidget {
     Widget getHome() {
       switch (authState) {
         case AuthState.authenticated:
-          return const HomeScreen();
+          return const _HomeGate();
         case AuthState.unauthenticated:
           return const RegisterScreen();
         case AuthState.checking:
@@ -37,5 +39,42 @@ class MyApp extends ConsumerWidget {
       ),
       home: getHome(),
     );
+  }
+}
+
+// Shows HomeScreen and, if onboarding not done, pushes Onboarding on top once.
+class _HomeGate extends StatefulWidget {
+  const _HomeGate();
+  @override
+  State<_HomeGate> createState() => _HomeGateState();
+}
+
+class _HomeGateState extends State<_HomeGate> {
+  bool _pushed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _maybeShowOnboarding();
+  }
+
+  Future<void> _maybeShowOnboarding() async {
+    final storage = const FlutterSecureStorage();
+    final done = await storage.read(key: 'onboarding_done');
+    if (!mounted) return;
+    if (done != '1' && !_pushed) {
+      _pushed = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+        );
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const HomeScreen();
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/providers/encounter_provider.dart';
+import '../ble_scan_screen.dart';
 
 class EncounterScreen extends ConsumerWidget {
   const EncounterScreen({super.key});
@@ -29,6 +30,15 @@ class EncounterScreen extends ConsumerWidget {
             },
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const BleScanScreen()),
+          );
+        },
+        icon: const Icon(Icons.bluetooth_searching),
+        label: const Text('BLEスキャン (v0)'),
       ),
     );
   }

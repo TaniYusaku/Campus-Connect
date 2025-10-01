@@ -34,6 +34,20 @@ class BleScanScreen extends ConsumerWidget {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
+                Row(
+                  children: [
+                    const Text('Continuous'),
+                    const SizedBox(width: 6),
+                    Consumer(builder: (context, ref, _) {
+                      final on = ref.watch(continuousScanProvider);
+                      return Switch(
+                        value: on,
+                        onChanged: (v) => ref.read(continuousScanProvider.notifier).state = v,
+                      );
+                    }),
+                    const SizedBox(width: 8),
+                  ],
+                ),
                 ElevatedButton(
                   onPressed:
                       state.scanning ? notifier.stopScan : notifier.startScan,
@@ -77,7 +91,7 @@ class BleScanScreen extends ConsumerWidget {
             divisions: 100,
             label: '$threshold dBm',
             onChanged: (v) =>
-                ref.read(rssiThresholdProvider.notifier).state = v.round(),
+                ref.read(rssiThresholdProvider.notifier).set(v.round()),
           ),
           const Divider(height: 1),
           Expanded(

@@ -4,6 +4,10 @@ class User {
   final String? email;
   final String? faculty;
   final int? grade;
+  final String? bio;
+  final String? profilePhotoUrl;
+  final Map<String, String>? snsLinks; // e.g. { 'x': 'id', 'instagram': 'id' }
+  final String? gender;
 
   User({
     required this.id,
@@ -11,15 +15,28 @@ class User {
     this.email,
     this.faculty,
     this.grade,
+    this.bio,
+    this.profilePhotoUrl,
+    this.snsLinks,
+    this.gender,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    final rawLinks = json['snsLinks'];
+    Map<String, String>? links;
+    if (rawLinks is Map) {
+      links = rawLinks.map((key, value) => MapEntry(key.toString(), value?.toString() ?? ''));
+    }
     return User(
-      id: json['id'],
-      username: json['userName'] ?? '名無しさん',
-      email: json['email'],
-      faculty: json['faculty'] ?? '未設定',
-      grade: json['grade'] ?? 0,
+      id: json['id'] as String,
+      username: (json['userName'] ?? '名無しさん') as String,
+      email: json['email'] as String?,
+      faculty: (json['faculty'] ?? '未設定') as String?,
+      grade: (json['grade'] is int) ? json['grade'] as int : int.tryParse('${json['grade'] ?? ''}'),
+      bio: json['bio'] as String?,
+      profilePhotoUrl: json['profilePhotoUrl'] as String?,
+      snsLinks: links,
+      gender: json['gender'] as String?,
     );
   }
-} 
+}

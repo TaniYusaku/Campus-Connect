@@ -11,8 +11,13 @@
   同一端末の重複検知は一定期間（例: 15分）内は上書きのみ（後続）。
 
 3. アドバタイズ（v0）
-- まずは「スキャンのみ」で実装開始します。
-- アドバタイズが必要になった場合は、`flutter_blue_plus` の提供有無や別プラグイン（例: `flutter_ble_peripheral`）の採用を検討します。
+- 最小アドバタイズを導入済みです（前景のみ）。
+- 使用プラグイン: `ble_peripheral`（pubspec参照）
+- 仕様:
+  - Local Name: `CC-<advertiseId>` を広告
+  - GATT Service: `kCcServiceUuid` に read-only characteristic `kCcCharacteristicUuid` を1つ配置し、`advertiseId` を文字列で保持
+  - `advertiseId` は端末内に安全に保存・再利用（`flutter_secure_storage`）
+  - 通知/notify は未使用（必要に応じて後続検討）
 
 4. スキャン仕様
 - フィルタ: 指定 Service UUID のみ。受信時に RSSI とタイムスタンプを付与。
@@ -27,8 +32,8 @@
 - Android: `BLUETOOTH`, `BLUETOOTH_ADMIN`, `BLUETOOTH_ADVERTISE`, `BLUETOOTH_SCAN`, `ACCESS_FINE_LOCATION` (API 31+ の権限モデルに対応)。
 
 7. サーバー連携
-- v0: 端末間検知の PoC としてローカル表示を優先（サーバー送信は任意）。
-- v1: 検知イベントのサマリを API へ送信（`POST /api/encounters`）。
+- v0: ローカル表示を優先しつつ、観測イベントを簡易送信（`POST /api/encounters/observe`）。
+- v1: マッチング判定に使う正式なサマリ送信（`POST /api/encounters` など）へ段階移行。
 
 8. 実装スコープ（v0）
 - `flutter_blue_plus` によるスキャン開始/停止、権限確認/要求。

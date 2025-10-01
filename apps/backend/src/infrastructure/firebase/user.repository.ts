@@ -8,7 +8,7 @@ import axios from 'axios';
 export class UserRepository implements IUserRepository {
   constructor() {}
 
-  async createUser(authInfo: { email: string; password?: string; userName: string; faculty?: string; grade?: number }): Promise<User> {
+  async createUser(authInfo: { email: string; password?: string; userName: string; faculty?: string; grade?: number; gender?: string }): Promise<User> {
     const auth = getAuth();
     const db = getFirestore();
     const userRecord = await auth.createUser({
@@ -25,6 +25,7 @@ export class UserRepository implements IUserRepository {
       updatedAt: new Date(),
       faculty: authInfo.faculty,
       grade: authInfo.grade,
+      gender: authInfo.gender,
     };
 
     await db.collection('users').doc(userRecord.uid).set(newUser);
@@ -40,7 +41,7 @@ export class UserRepository implements IUserRepository {
     return doc.data() as User;
   }
 
-  async signIn(email: string, password: string): Promise<{ token: string; user: User }> {
+  async signIn(email: string, password: string): Promise<{ token: string; refreshToken: string; expiresIn: number; user: User }> {
     const apiKey = process.env.FIREBASE_WEB_API_KEY;
     const authUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`;
 
@@ -50,15 +51,42 @@ export class UserRepository implements IUserRepository {
       returnSecureToken: true,
     });
 
-    const idToken = response.data.idToken;
-    const uid = response.data.localId;
+    const idToken = response.data.idToken as string;
+    const uid = response.data.localId as string;
+    const refreshToken = response.data.refreshToken as string;
+    const expiresIn = Number(response.data.expiresIn ?? '3600');
 
     const user = await this.findById(uid);
     if (!user) {
       throw new Error('User not found in Firestore.');
     }
 
-    return { token: idToken, user };
+    return { token: idToken, refreshToken, expiresIn, user };
+  }
+
+  /**
+   * Exchange a Firebase refresh token for a new ID token using the Secure Token API.
+   */
+  async refreshIdToken(refreshToken: string): Promise<{ token: string; refreshToken: string; expiresIn: number; user: User }> {
+    const apiKey = process.env.FIREBASE_WEB_API_KEY;
+    const url = `https://securetoken.googleapis.com/v1/token?key=${apiKey}`;
+
+    const response = await axios.post(url, {
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    });
+
+    const idToken: string = response.data.id_token;
+    const uid: string = response.data.user_id;
+    const newRefresh: string = response.data.refresh_token;
+    const expiresIn: number = Number(response.data.expires_in ?? '3600');
+
+    const user = await this.findById(uid);
+    if (!user) {
+      throw new Error('User not found in Firestore.');
+    }
+
+    return { token: idToken, refreshToken: newRefresh, expiresIn, user };
   }
 
   async update(id: string, userInfo: UpdatableUserInfo): Promise<User> {

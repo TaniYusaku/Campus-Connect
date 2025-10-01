@@ -9,10 +9,19 @@ import { userRouter } from './presentation/routers/user.router'
 import { encounterRouter } from './presentation/routers/encounter.router'
 
 try {
+    const sa: any = serviceAccount as any;
+    const defaultBucket = sa?.project_id ? `${sa.project_id}.appspot.com` : undefined;
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || defaultBucket;
     initializeApp({
         credential: cert(serviceAccount as ServiceAccount),
+        storageBucket: bucketName,
     });
     console.log('Firebase Admin SDK initialized successfully.');
+    if (!bucketName) {
+      console.warn('Warning: No storage bucket configured. Set FIREBASE_STORAGE_BUCKET or ensure service account has project_id.');
+    } else {
+      console.log(`Using storage bucket: ${bucketName}`);
+    }
 } catch (error) {
     console.error('Firebase Admin SDK initialization error:', error);
 }
@@ -32,8 +41,6 @@ app.get('/', (c) => {
 app.get('/test', (c) => {
     return c.text('Test route is working!')
   })
-  
-  const api = new Hono()
 // ↓↓↓↓ ルーターを登録 ↓↓↓↓
 app.route('/auth', authRouter);
 app.route('/users', userRouter);

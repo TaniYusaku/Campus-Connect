@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/api_service.dart'; // ApiServiceをインポート
-import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // インポート
 import '../providers/auth_provider.dart';
 
-// ApiServiceのインスタンスをグローバルに提供
-final apiServiceProvider = Provider((ref) => ApiService());
+// ApiService provider is now defined in providers/api_provider.dart
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -17,7 +14,6 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _storage = const FlutterSecureStorage(); // storageのインスタンスを作成
   bool _isLoading = false;
 
   @override

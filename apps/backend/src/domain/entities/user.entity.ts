@@ -6,6 +6,7 @@ export type User = {
   updatedAt: Date;
   readonly faculty?: string;
   readonly grade?: number;
+  readonly gender?: string;
   readonly profilePhotoUrl?: string;
   readonly bio?: string;
   readonly hobbies?: string[];

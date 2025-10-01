@@ -11,6 +11,7 @@ import { BlockRepository } from '../../infrastructure/firebase/block.repository'
 import type { IEncounterRepository } from '../../domain/repositories/encounter.repository';
 import type { IMatchRepository } from '../../domain/repositories/match.repository';
 import type { IBlockRepository } from '../../domain/repositories/block.repository';
+import { getStorage } from 'firebase-admin/storage';
 
 export const userRouter = new Hono();
 const userRepository = new UserRepository();
@@ -26,6 +27,7 @@ const updateUserSchema = z.object({
   userName: z.string().min(1).optional(),
   faculty: z.string().optional(),
   grade: z.number().optional(),
+  gender: z.enum(['男性', '女性', 'その他／回答しない']).optional(),
   profilePhotoUrl: z.string().url().optional(),
   bio: z.string().optional(),
   hobbies: z.array(z.string()).optional(),
@@ -78,7 +80,7 @@ userRouter.delete('/me', async (c) => {
   }
 });
 
-userRouter.post('/:userId/like', authMiddleware, async (c) => {
+userRouter.post('/:userId/like', async (c) => {
   const likingUser = c.get('user');
   const likedUserId = c.req.param('userId');
 
@@ -147,3 +149,53 @@ userRouter.delete('/:userId/block', async (c) => {
 });
 
 // ▼▼▼ テスト用のエンドポイントを削除しました ▼▼▼ 
+// --- Profile photo upload: signed URL issuance and confirm ---
+const uploadReqSchema = z.object({
+  contentType: z.string().min(1), // e.g. image/jpeg, image/png
+});
+
+// Step 1: issue a signed URL for client-side PUT upload
+userRouter.post('/me/profile-photo/upload-url', zValidator('json', uploadReqSchema), async (c) => {
+  const { uid } = c.get('user');
+  const { contentType } = c.req.valid('json');
+  const bucket = getStorage().bucket();
+  try {
+    const [exists] = await bucket.exists();
+    if (!exists) {
+      console.error('Storage bucket does not exist:', bucket.name);
+      return c.json({ error: `Storage bucket not found: ${bucket.name}` }, 500);
+    }
+  } catch (e) {
+    console.error('Failed to verify bucket existence:', bucket.name, e);
+    return c.json({ error: 'Failed to verify storage bucket' }, 500);
+  }
+  let ext = contentType.split('/')[1] || 'jpg';
+  // Normalize extension for common types
+  if (ext.toLowerCase() === 'jpeg') ext = 'jpg';
+  const objectPath = `profile_photos/${uid}/${Date.now()}.${ext}`;
+  const file = bucket.file(objectPath);
+  const [uploadUrl] = await file.getSignedUrl({
+    version: 'v4',
+    action: 'write',
+    expires: Date.now() + 5 * 60 * 1000,
+    contentType,
+  });
+  console.log('Issued signed URL for upload', { bucket: bucket.name, objectPath, contentType });
+  const publicUrl = `https://storage.googleapis.com/${bucket.name}/${objectPath}`;
+  return c.json({ uploadUrl, objectPath, publicUrl });
+});
+
+const confirmSchema = z.object({ objectPath: z.string().min(1) });
+// Step 2: after client PUT, confirm to make it public and update user profile
+userRouter.post('/me/profile-photo/confirm', zValidator('json', confirmSchema), async (c) => {
+  const { uid } = c.get('user');
+  const { objectPath } = c.req.valid('json');
+  const bucket = getStorage().bucket();
+  const file = bucket.file(objectPath);
+  // Make the uploaded file publicly readable for MVP simplicity
+  await file.makePublic();
+  const publicUrl = `https://storage.googleapis.com/${bucket.name}/${objectPath}`;
+  // Save to user profile
+  const updated = await userRepository.update(uid, { profilePhotoUrl: publicUrl });
+  return c.json(updated);
+});
