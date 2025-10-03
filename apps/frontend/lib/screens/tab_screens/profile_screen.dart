@@ -164,13 +164,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           return const Center(child: Text('ユーザー情報が取得できませんでした'));
         }
         _initFields(user);
-        return Stack(
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
+        // Pull-to-refresh to reload latest profile
+        return RefreshIndicator(
+          onRefresh: () async {
+            _initialized = false;
+            ref.invalidate(profileProvider);
+            await ref.read(profileProvider.future);
+          },
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -286,13 +294,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
               ),
-            ),
-            if (_saving || _uploading)
-              Container(
-                color: Colors.black45,
-                child: const Center(child: CircularProgressIndicator()),
               ),
-          ],
+              if (_saving || _uploading)
+                Container(
+                  color: Colors.black45,
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+            ],
+          ),
         );
       },
     );

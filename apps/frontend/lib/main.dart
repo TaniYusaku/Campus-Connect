@@ -4,6 +4,7 @@ import 'providers/auth_provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
+import 'providers/ble_advertise_provider.dart';
 import 'screens/register_screen.dart';
 
 void main() {
@@ -16,6 +17,8 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
+    // Ensure auto-advertising manager is active regardless of current screen
+    ref.watch(autoAdvertiseManagerProvider);
 
     Widget getHome() {
       switch (authState) {

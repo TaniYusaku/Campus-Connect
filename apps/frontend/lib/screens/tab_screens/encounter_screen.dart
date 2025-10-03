@@ -15,27 +15,40 @@ class EncounterScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('エラー: $err')),
         data: (users) {
-          if (users.isEmpty) {
-            return const Center(child: Text('まだ誰もすれ違っていません。'));
-          }
-          return ListView.builder(
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final user = users[index];
-              return ListTile(
-                leading: const Icon(Icons.person),
-                title: Text(user.username),
-                subtitle: Text('${user.faculty} ${user.grade}年'),
-              );
+          return RefreshIndicator(
+            onRefresh: () async {
+              await ref.refresh(encounterListProvider.future);
             },
+            child: users.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 240),
+                      Center(child: Text('まだ誰もすれ違っていません。')),
+                    ],
+                  )
+                : ListView.builder(
+                    itemCount: users.length,
+                    itemBuilder: (context, index) {
+                      final user = users[index];
+                      return ListTile(
+                        leading: const Icon(Icons.person),
+                        title: Text(user.username),
+                        subtitle: Text('${user.faculty} ${user.grade}年'),
+                      );
+                    },
+                  ),
           );
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const BleScanScreen()),
-          );
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const BleScanScreen()))
+              .then((_) {
+            // BLEスキャン画面から戻ったら最新のすれ違いを再取得
+            ref.invalidate(encounterListProvider);
+          });
         },
         icon: const Icon(Icons.bluetooth_searching),
         label: const Text('BLEスキャン (v0)'),

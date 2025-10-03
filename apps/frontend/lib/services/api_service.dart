@@ -20,7 +20,7 @@ class ApiService {
   // ベースURLは --dart-define で上書き可能（例: --dart-define=API_BASE_URL=http://192.168.0.79:3000/api）
   final String _baseUrl = const String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.11.24:3000/api',
+    defaultValue: 'http://192.168.111.145:3000/api',
   );
 
   // Concurrency guard for refresh
@@ -149,7 +149,7 @@ class ApiService {
   }
 
   // 観測したアドバタイズIDをサーバーへ送信（仮API: POST /api/encounters/observe）
-  Future<void> postObservation({
+  Future<bool> postObservation({
     required String observedId,
     required int rssi,
     DateTime? timestamp,
@@ -170,12 +170,45 @@ class ApiService {
           }),
         );
       });
-      if (response == null) return;
+      if (response == null) return false;
       if (response.statusCode >= 400) {
         print('postObservation failed: ${response.statusCode} ${response.body}');
+        return false;
       }
+      // 201 = mutual encounter recorded
+      if (response.statusCode == 201) return true;
+      return false;
     } catch (e) {
       print('postObservation error: $e');
+      return false;
+    }
+  }
+
+  // 現在の一時ID(tempId)をサーバーへ登録し、観測時の解決に使う
+  Future<void> registerTempId({
+    required String tempId,
+    DateTime? expiresAt,
+  }) async {
+    try {
+      final response = await _authorizedRequest((token) {
+        return http.post(
+          Uri.parse('$_baseUrl/encounters/register-tempid'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'tempId': tempId,
+            if (expiresAt != null) 'expiresAt': expiresAt.toUtc().toIso8601String(),
+          }),
+        );
+      });
+      if (response == null) return;
+      if (response.statusCode >= 400) {
+        print('registerTempId failed: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      print('registerTempId error: $e');
     }
   }
 

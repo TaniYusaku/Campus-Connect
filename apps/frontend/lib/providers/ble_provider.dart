@@ -6,11 +6,40 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/ble_service.dart';
 import '../shared/ble_constants.dart';
 import 'api_provider.dart';
+import 'encounter_provider.dart';
 
 final bleServiceProvider = Provider<BleService>((ref) => BleService());
 
 // 連続スキャンモード（デフォルト: OFF）
-final continuousScanProvider = StateProvider<bool>((ref) => false);
+class BoolPrefNotifier extends StateNotifier<bool> {
+  final String key;
+  final bool defaultValue;
+  final _storage = const FlutterSecureStorage();
+  BoolPrefNotifier({required this.key, required this.defaultValue}) : super(defaultValue);
+  Future<void> load() async {
+    final v = await _storage.read(key: key);
+    if (v == '1') state = true;
+    if (v == '0') state = false;
+  }
+  Future<void> set(bool v) async {
+    state = v;
+    await _storage.write(key: key, value: v ? '1' : '0');
+  }
+}
+
+// 連続スキャンモード（デフォルト: OFF）永続化
+final continuousScanProvider = StateNotifierProvider<BoolPrefNotifier, bool>((ref) {
+  final n = BoolPrefNotifier(key: 'pref_continuous_scan', defaultValue: false);
+  n.load();
+  return n;
+});
+
+// CCサービスUUIDでのスキャンフィルタを有効化（デフォルト: ON）永続化
+final ccFilterProvider = StateNotifierProvider<BoolPrefNotifier, bool>((ref) {
+  final n = BoolPrefNotifier(key: 'pref_cc_only', defaultValue: true);
+  n.load();
+  return n;
+});
 
 // RSSI しきい値（デフォルト -80dBm）
 // RSSI しきい値（デフォルト -80dBm）を端末に保存して維持
@@ -79,12 +108,24 @@ class BleScanNotifier extends StateNotifier<BleScanState> {
       state = state.copyWith(adapterState: s);
     });
     _resultsSub = _service.scanResults.listen((list) {
-      state = state.copyWith(results: list);
-      _handleObservations(list);
+      // Apply in-app CC filter for reliability across platforms
+      final ccOnly = _ref.read(ccFilterProvider);
+      final ccGuid = Guid(kCcServiceUuid);
+      List<ScanResult> output = list;
+      if (ccOnly) {
+        output = list.where((r) {
+          final ad = r.advertisementData;
+          final hasName = ad.advName.startsWith(kCcLocalNamePrefix);
+          final hasSvc = ad.serviceUuids.contains(ccGuid);
+          return hasName || hasSvc;
+        }).toList();
+      }
+      state = state.copyWith(results: output);
+      _handleObservations(output);
     });
   }
 
-  void _handleObservations(List<ScanResult> list) {
+  Future<void> _handleObservations(List<ScanResult> list) async {
     final now = DateTime.now();
     for (final r in list) {
       // 現在のしきい値未満は送らない
@@ -94,17 +135,21 @@ class BleScanNotifier extends StateNotifier<BleScanState> {
       if (adName.startsWith(kCcLocalNamePrefix)) {
         final observedId = adName.substring(kCcLocalNamePrefix.length);
         final last = _reported[observedId];
-        // rate-limit: send at most once per 5 minutes per ID
-        if (last == null || now.difference(last) > const Duration(minutes: 5)) {
+        // rate-limit: send at most once per 15 minutes per ID (tempID window)
+        if (last == null || now.difference(last) > const Duration(minutes: 15)) {
           _reported[observedId] = now;
           final api = _ref.read(apiServiceProvider);
           // fire-and-forget; errors are logged in ApiService
           // include rssi and timestamp
-          api.postObservation(
+          final ok = await api.postObservation(
             observedId: observedId,
             rssi: r.rssi,
             timestamp: now,
           );
+          if (ok) {
+            // Refresh encounter list when a mutual encounter is recorded
+            _ref.invalidate(encounterListProvider);
+          }
         }
       }
     }
@@ -113,7 +158,11 @@ class BleScanNotifier extends StateNotifier<BleScanState> {
   Future<void> startScan() async {
     if (state.scanning) return;
     final continuous = _ref.read(continuousScanProvider);
-    await _service.startScan(timeout: continuous ? null : const Duration(seconds: 10));
+    // Use unfiltered scan, then filter in-app for better cross-platform behavior
+    await _service.startScan(
+      timeout: continuous ? null : const Duration(seconds: 10),
+      filterCcService: false,
+    );
     state = state.copyWith(scanning: true);
     // when scan ends, update flag via onScanResults empty check is not reliable; poll isScanningNow
     // For simplicity, set a timer to reset scanning flag after typical timeout

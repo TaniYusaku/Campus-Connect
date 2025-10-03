@@ -26,37 +26,59 @@ class BleScanScreen extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(12.0),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    'Bluetooth: ${state.adapterState.name}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                Text(
+                  'Bluetooth: ${state.adapterState.name}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Row(
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    const Text('Continuous'),
-                    const SizedBox(width: 6),
-                    Consumer(builder: (context, ref, _) {
-                      final on = ref.watch(continuousScanProvider);
-                      return Switch(
-                        value: on,
-                        onChanged: (v) => ref.read(continuousScanProvider.notifier).state = v,
-                      );
-                    }),
-                    const SizedBox(width: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Continuous'),
+                        const SizedBox(width: 6),
+                        Consumer(builder: (context, ref, _) {
+                          final on = ref.watch(continuousScanProvider);
+                          return Switch(
+                            value: on,
+                            onChanged: (v) => ref.read(continuousScanProvider.notifier).set(v),
+                          );
+                        }),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('CC only'),
+                        const SizedBox(width: 6),
+                        Consumer(builder: (context, ref, _) {
+                          final ccOnly = ref.watch(ccFilterProvider);
+                          return Switch(
+                            value: ccOnly,
+                            onChanged: (v) => ref.read(ccFilterProvider.notifier).set(v),
+                          );
+                        }),
+                      ],
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          state.scanning ? notifier.stopScan : notifier.startScan,
+                      child: Text(state.scanning ? 'Stop' : 'Start'),
+                    ),
+                    ElevatedButton(
+                      onPressed: advState.advertising ? advNotifier.stop : advNotifier.start,
+                      child: Text(advState.advertising ? 'Adv Stop' : 'Adv Start'),
+                    ),
                   ],
-                ),
-                ElevatedButton(
-                  onPressed:
-                      state.scanning ? notifier.stopScan : notifier.startScan,
-                  child: Text(state.scanning ? 'Stop' : 'Start'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: advState.advertising ? advNotifier.stop : advNotifier.start,
-                  child: Text(advState.advertising ? 'Adv Stop' : 'Adv Start'),
                 ),
               ],
             ),
@@ -101,14 +123,31 @@ class BleScanScreen extends ConsumerWidget {
                 final r = results[index];
                 final device = r.device;
                 final ad = r.advertisementData;
+                final isCc = ad.advName.startsWith('CC-');
+                final svcCount = ad.serviceUuids.length;
+                final title = ad.advName.isNotEmpty
+                    ? ad.advName
+                    : device.platformName.isNotEmpty
+                        ? device.platformName
+                        : device.remoteId.str;
                 return ListTile(
                   leading: const Icon(Icons.bluetooth),
-                  title: Text(ad.advName.isNotEmpty
-                      ? ad.advName
-                      : device.platformName.isNotEmpty
-                          ? device.platformName
-                          : device.remoteId.str),
-                  subtitle: Text('RSSI: ${r.rssi}'),
+                  title: Row(
+                    children: [
+                      Expanded(child: Text(title)),
+                      if (isCc)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          margin: const EdgeInsets.only(left: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('CC', style: TextStyle(color: Colors.blue, fontSize: 12)),
+                        ),
+                    ],
+                  ),
+                  subtitle: Text('RSSI: ${r.rssi}  • svcUUIDs: ${svcCount}'),
                 );
               },
             ),
