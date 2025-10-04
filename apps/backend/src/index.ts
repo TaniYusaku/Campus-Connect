@@ -7,6 +7,7 @@ import serviceAccount from '../serviceAccountKey.json' assert { type: 'json' }
 import { authRouter } from './presentation/routers/auth.router'
 import { userRouter } from './presentation/routers/user.router'
 import { encounterRouter } from './presentation/routers/encounter.router'
+import { startRecentEncountersCleanup } from './jobs/cleanup_recent_encounters'
 
 try {
     const sa: any = serviceAccount as any;
@@ -55,3 +56,13 @@ serve({
     // Bind to all interfaces so physical devices can reach the server
     hostname: '0.0.0.0',
 })
+
+// Start periodic cleanup of 24h-expired recentEncounters
+const cleanupIntervalMin = Number(process.env.CLEANUP_INTERVAL_MINUTES ?? '60');
+const disableCleanup = process.env.DISABLE_CLEANUP === '1' || cleanupIntervalMin <= 0 || Number.isNaN(cleanupIntervalMin);
+if (disableCleanup) {
+  console.log('recentEncounters cleanup is disabled');
+} else {
+  console.log(`Starting recentEncounters cleanup every ${cleanupIntervalMin} minutes`);
+  startRecentEncountersCleanup(cleanupIntervalMin);
+}

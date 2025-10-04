@@ -20,7 +20,9 @@ class ApiService {
   // ベースURLは --dart-define で上書き可能（例: --dart-define=API_BASE_URL=http://192.168.0.79:3000/api）
   final String _baseUrl = const String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.111.145:3000/api',
+    //192.168.0.79 家のWifi
+    //192.168.111.145
+    defaultValue: 'http://192.168.0.79:3000/api',
   );
 
   // Concurrency guard for refresh

@@ -31,6 +31,7 @@ async create(userId1: string, userId2: string): Promise<boolean> {
 const db = getFirestore();
 
 const timestamp = new Date();
+const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
 
 
@@ -42,9 +43,9 @@ const encounter2Ref = db.collection('users').doc(userId2).collection('recentEnco
 
 const batch = db.batch();
 
-batch.set(encounter1Ref, { lastEncounteredAt: timestamp });
+batch.set(encounter1Ref, { lastEncounteredAt: timestamp, expiresAt });
 
-batch.set(encounter2Ref, { lastEncounteredAt: timestamp });
+batch.set(encounter2Ref, { lastEncounteredAt: timestamp, expiresAt });
 
 await batch.commit();
 

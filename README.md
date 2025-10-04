@@ -10,12 +10,30 @@ Quick Start
 - Frontend can override API base URL via dart-define:
   - Example: `flutter run --dart-define=API_BASE_URL=http://<LAN_IP>:3000/api`
   - Default (if omitted) is defined in `lib/services/api_service.dart`.
+ - Backend cleanup: set `CLEANUP_INTERVAL_MINUTES=60` (default) to control 24h encounter cleanup cadence. To disable, set `DISABLE_CLEANUP=1`.
 
 Docs
 - Requirements: `doc/REQUIREMENTS.md`
 - Backend spec: `apps/backend/doc/backend_requirements.md`
 - Tech stack: `apps/backend/doc/tech_stack.md`
 - Implementation status: `doc/IMPLEMENTATION_STATUS.md`
+
+BLE (v0) Overview
+- Scan (foreground): `flutter_blue_plus`. In-app filter by Local Name prefix `CC-` or Campus Connect service UUID. RSSI threshold adjustable in UI (default -80 dBm).
+- Advertise (foreground): `ble_peripheral`. Local Name `CC-<tempId>` and minimal GATT service with a read-only characteristic holding the current tempId.
+- TempId rotation: every 15 minutes. TempId is persisted locally and registered to the backend with ~16 min expiry.
+- Observation upload: on encountering a CC device above the threshold, client sends `POST /api/encounters/observe` (rate-limited per tempId).
+
+BLE Security Summary
+- Anti-replay/spoofing: short-lived tempIds (15 min) with server-side expiry; mutual encounter requires two-way observations within ~5 minutes.
+- Transport encryption: App ↔ API over HTTPS; signed URL uploads use HTTPS. BLE advertising is plaintext but only contains the rotating tempId.
+- API authentication: Firebase ID token (Bearer) required for protected endpoints; verified by backend.
+- TempId mapping: Firestore `tempIds/{tempId}` → `{ userId, expiresAt }` used to resolve observations, honoring expiry.
+
+24h TTL (Recent Encounters)
+- The server runs a periodic cleanup that deletes `users/*/recentEncounters/*` older than 24 hours (collection group query), by default every 60 minutes.
+- Production alternative: enable Firestore TTL policy on `recentEncounters.expiresAt` (we now write this field as `lastEncounteredAt + 24h`).
+ - If you see `FAILED_PRECONDITION` from the cleanup, create a Composite Index for collection group `recentEncounters` on field `lastEncounteredAt` (ascending), or rely on the built-in fallback which iterates per-user collections.
 
 Security
 - Do NOT commit secrets. Keep `apps/backend/serviceAccountKey.json` out of VCS and rotate if already exposed.

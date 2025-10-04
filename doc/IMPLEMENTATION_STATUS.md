@@ -8,6 +8,8 @@ Backend (Hono)
   - GET `/api/users/me`, PUT `/api/users/me`, DELETE `/api/users/me`
   - GET `/api/users/encounters`
   - POST `/api/encounters`
+  - POST `/api/encounters/observe` (tempId観測イベントの受信・相互観測でEncounter生成)
+  - POST `/api/encounters/register-tempid` (広告中のtempIdを登録、期限付き)
   - POST `/api/users/:userId/like`
   - GET `/api/users/friends`
   - GET `/api/users/blocked`
@@ -17,18 +19,22 @@ Backend (Hono)
   - PUT `/users/me/device`
   - GET `/users/{userId}` (public profile)
   - Pagination for list endpoints
+  - Firestore TTLポリシー適用（任意・推奨、`recentEncounters.expiresAt` フィールド）
 
 Frontend (Flutter)
 - Implemented
   - Register/Login screens and state management
   - Encounters list consuming `/api/users/encounters`
+  - BLE scan screen (foreground) with RSSI threshold & CC filter
+  - BLE advertising via `ble_peripheral`, tempId rotation (15min) and backend registration
+  - Token refresh/expiry handling in `ApiService` (proactive + 401 retry)
+  - サーバ側の24hクリーンアップジョブ（`recentEncounters`定期削除、1時間毎）
 - Missing vs requirements
   - Navigation post-registration
   - Friends list and profile UI with backend wiring
   - Like/Block actions UI
   - Profile edit (photo/bio/hobbies/SNS)
-  - Token refresh/expiry handling
-  - BLE: 現時点はドキュメント方針を `flutter_blue_plus` に変更（フォアグラウンドのみ、スキャン中心）。
+  - BLE: バックグラウンド動作対応（省電力/OS制約考慮）
 
 Security/Operational
 - `apps/backend/serviceAccountKey.json` exists in repo; keep out of VCS and rotate if leaked.

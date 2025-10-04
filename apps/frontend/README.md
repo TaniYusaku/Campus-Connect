@@ -1,32 +1,39 @@
 Frontend (Flutter)
 
 Overview
-- Flutter app with Riverpod state management and http client.
-- Auth token stored in `flutter_secure_storage`.
+- Flutter app with Riverpod state management and HTTP client.
+- Auth and app prefs stored in `flutter_secure_storage`.
+- Foreground BLE scanning via `flutter_blue_plus`, minimal advertising via `ble_peripheral`.
+- Auto-advertise manager starts advertising when authenticated.
 
 Requirements
 - Flutter SDK (stable), iOS/Android toolchains.
-- Backend reachable at `http://<host>:3000/api` (default is `localhost` for simulators).
-- BLE (v0): Use `flutter_blue_plus` for scanning in foreground.
-- Android: minSdkVersion >= 21, BLE permissions added in `android/app/src/main/AndroidManifest.xml`.
-- iOS: `NSBluetoothAlwaysUsageDescription` added in `ios/Runner/Info.plist`.
- - iOS minimum: 15.0 (set in `ios/Podfile`).
+- Backend reachable at `http://<host>:3000/api`.
+- Android: minSdkVersion 23, BLE permissions set in `android/app/src/main/AndroidManifest.xml` (SCAN/CONNECT/ADVERTISE, legacy FINE_LOCATION for <= Android 11).
+- iOS: `NSBluetoothAlwaysUsageDescription` and `NSBluetoothPeripheralUsageDescription` added in `ios/Runner/Info.plist`. iOS minimum 15.0.
 
 Run
 - `flutter pub get`
-- `flutter run`
-
-Screens
-- Register/Login: simple email/password flow hitting `/api/auth/*`.
-- Home tabs: Encounters, Friends, Profile (friends/profile are placeholders).
+- `flutter run` (or specify API base via `--dart-define` below)
 
 Config
-- API base URL is hardcoded in `lib/services/api_service.dart`.
-  - For real devices, replace `localhost` with your machine IP.
+- API base URL can be overridden via `--dart-define`:
+  - `flutter run --dart-define=API_BASE_URL=http://<LAN_IP>:3000/api`
+  - Default base is set in `lib/services/api_service.dart`.
+
+Screens
+- Register/Login: email/password flow hitting `/api/auth/*`.
+- Home tabs: Encounters, Friends, Profile (friends/profile are placeholders for now).
+- BLE Scan screen: toggle continuous scan, CC-only filter, RSSI threshold, and start/stop advertising.
+
+BLE (v0) implemented
+- Scan: Foreground-only, with in-app filter by Local Name prefix `CC-` or service UUID.
+- Advertise: Local Name `CC-<tempId>` and minimal GATT service (read-only characteristic with the current tempId).
+- TempId rotation: every 15 minutes, persisted locally and sent to backend (`POST /api/encounters/register-tempid`).
+- Observation upload: when a CC device is seen above RSSI threshold, send `POST /api/encounters/observe` (rate-limited per tempId).
 
 Next Steps
-- Add UI for like/block and profile edit.
-- Handle token expiry and re-login gracefully.
-- Wire friends/profile screens to backend endpoints.
-- Add BLE scan UI using `flutter_blue_plus` (foreground only for v0).
- - If you just added the plugin, fully stop and re-run the app (not just hot reload).
+- Enforce 24h TTL cleanup for `recentEncounters` on server (TTL policy or scheduled job).
+- Implement push notifications on match creation.
+- Wire Friends/Profile screens and add like/block UI.
+- Consider background scan/advertise in later phases (OS constraints apply).
