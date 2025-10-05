@@ -11,6 +11,7 @@ import { BlockRepository } from '../../infrastructure/firebase/block.repository'
 import type { IEncounterRepository } from '../../domain/repositories/encounter.repository';
 import type { IMatchRepository } from '../../domain/repositories/match.repository';
 import type { IBlockRepository } from '../../domain/repositories/block.repository';
+// (deduped) ILikeRepository/LikeRepository imports are above
 import { getStorage } from 'firebase-admin/storage';
 
 export const userRouter = new Hono();
@@ -90,10 +91,45 @@ userRouter.post('/:userId/like', async (c) => {
 
   try {
     await likeRepository.create(likingUser.uid, likedUserId);
-    return c.json({ message: 'Successfully liked user.' }, 201);
+    // 要件変更: 相互いいねが揃った時点で友達（マッチ）成立
+    const mutual = await likeRepository.exists(likedUserId, likingUser.uid);
+    let matchCreated = false;
+    if (mutual) {
+      // ブロック関係がない場合のみマッチ作成
+      const likingBlocked = await blockRepository.findAllIds(likingUser.uid);
+      const likedBlocked = await blockRepository.findAllIds(likedUserId);
+      const blockedEither = likingBlocked.includes(likedUserId) || likedBlocked.includes(likingUser.uid);
+      if (!blockedEither) {
+        await matchRepository.create(likingUser.uid, likedUserId);
+        matchCreated = true;
+      }
+    }
+    return c.json({ message: 'Successfully liked user.', matchCreated }, 201);
   } catch (error) {
     console.error('Failed to like user:', error);
     return c.json({ error: 'Failed to like user.' }, 500);
+  }
+});
+
+// DELETE /api/users/:userId/like
+// 方針A: マッチ未成立の「いいね」だけ取り消し可能。マッチ後はブロックで解消。
+userRouter.delete('/:userId/like', async (c) => {
+  const me = c.get('user').uid;
+  const targetId = c.req.param('userId');
+  if (me === targetId) {
+    return c.json({ error: 'You cannot unlike yourself.' }, 400);
+  }
+  try {
+    // If already matched, do not allow unlike (use block instead)
+    const friendIds = await matchRepository.findAll(me);
+    if (friendIds.includes(targetId)) {
+      return c.json({ error: 'Already matched. Use block to unfriend.' }, 409);
+    }
+    await likeRepository.delete(me, targetId);
+    return c.json({ message: 'Like removed' }, 200);
+  } catch (e) {
+    console.error('Failed to unlike user:', e);
+    return c.json({ error: 'Failed to unlike user.' }, 500);
   }
 });
 
@@ -126,6 +162,22 @@ userRouter.get('/blocked', async (c) => {
   const userId = c.get('user').uid;
   const blockedIds = await blockRepository.findAll(userId);
   const users = await userRepository.findByIds(blockedIds);
+  const safeUsers = users.map(({ email, ...rest }) => rest);
+  return c.json(safeUsers);
+});
+
+// GET /api/users/likes/recent?hours=24
+userRouter.get('/likes/recent', async (c) => {
+  const userId = c.get('user').uid;
+  const hoursStr = c.req.query('hours');
+  const hours = Math.max(1, Math.min(168, Number(hoursStr ?? '24'))); // 1..168h
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+  const likedIds = await likeRepository.findRecent(userId, since);
+  if (likedIds.length === 0) return c.json([]);
+  // Exclude blocked users
+  const blockedUserIds = await blockRepository.findAllIds(userId);
+  const filtered = likedIds.filter((id) => !blockedUserIds.includes(id));
+  const users = await userRepository.findByIds(filtered);
   const safeUsers = users.map(({ email, ...rest }) => rest);
   return c.json(safeUsers);
 });

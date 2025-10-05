@@ -6,8 +6,13 @@ import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'providers/ble_advertise_provider.dart';
 import 'screens/register_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // ← Firebase前に必要
+
+  await Firebase.initializeApp(); // ← シンプル初期化（GoogleService-Info.plistを読み込む）
+
   runApp(const ProviderScope(child: MyApp()));
 }
 

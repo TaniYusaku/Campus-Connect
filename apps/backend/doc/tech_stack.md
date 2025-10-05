@@ -129,3 +129,12 @@ Firestoreセキュリティルールを用いて、ユーザーが自身のデ�
 - `PUT /users/me/device` デバイストークン登録
 - `GET /users/{userId}` 他者プロフィール取得（公開情報のみ）
 - ページネーション（encounters/friends/blocked 一覧）
+###### **5.2.6. `tempIds` コレクション**
+* **パス**: `tempIds/{tempId}`
+* **説明**: 端末が広告中の一時IDと、その所有ユーザー/有効期限を管理する。
+* **フィールド**:
+| フィールド名 | 型 (Type) | 説明 |
+| :--- | :--- | :--- |
+| `userId` | `string` | このtempIdのユーザーID |
+| `updatedAt` | `Timestamp` | 登録更新時刻 |
+| `expiresAt` | `Timestamp` | 失効時刻（TTLポリシー対象） |

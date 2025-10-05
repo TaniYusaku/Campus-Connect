@@ -268,6 +268,124 @@ class ApiService {
     return null;
   }
 
+  // --- Social actions ---
+  Future<({bool ok, bool matchCreated})> likeUser(String userId) async {
+    final response = await _authorizedRequest((token) {
+      return http.post(
+        Uri.parse('$_baseUrl/users/$userId/like'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    });
+    if (response == null) return (ok: false, matchCreated: false);
+    final ok = response.statusCode >= 200 && response.statusCode < 300;
+    bool matchCreated = false;
+    try {
+      final body = jsonDecode(response.body);
+      final mc = body is Map<String, dynamic> ? body['matchCreated'] : null;
+      if (mc is bool) matchCreated = mc;
+    } catch (_) {}
+    return (ok: ok, matchCreated: matchCreated);
+  }
+
+  Future<bool> unlikeUser(String userId) async {
+    final response = await _authorizedRequest((token) {
+      return http.delete(
+        Uri.parse('$_baseUrl/users/$userId/like'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    });
+    if (response == null) return false;
+    if (response.statusCode == 200) return true;
+    // 409 = already matched (use block)
+    return false;
+  }
+
+  Future<bool> blockUser(String userId) async {
+    final response = await _authorizedRequest((token) {
+      return http.post(
+        Uri.parse('$_baseUrl/users/$userId/block'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    });
+    if (response == null) return false;
+    return response.statusCode >= 200 && response.statusCode < 300;
+  }
+
+  Future<bool> unblockUser(String userId) async {
+    final response = await _authorizedRequest((token) {
+      return http.delete(
+        Uri.parse('$_baseUrl/users/$userId/block'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    });
+    if (response == null) return false;
+    return response.statusCode >= 200 && response.statusCode < 300;
+  }
+
+  Future<List<User>> getFriends() async {
+    final response = await _authorizedRequest((token) {
+      return http.get(
+        Uri.parse('$_baseUrl/users/friends'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    });
+    if (response != null && response.statusCode == 200) {
+      final body = jsonDecode(response.body) as List<dynamic>;
+      return body.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
+  }
+
+  Future<List<User>> getBlockedUsers() async {
+    final response = await _authorizedRequest((token) {
+      return http.get(
+        Uri.parse('$_baseUrl/users/blocked'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    });
+    if (response != null && response.statusCode == 200) {
+      final body = jsonDecode(response.body) as List<dynamic>;
+      return body.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
+  }
+
+  // 直近hours時間に自分が「いいね」したユーザー一覧を取得（サーバー基準）
+  Future<List<User>> getRecentLikedUsers({int hours = 24}) async {
+    final response = await _authorizedRequest((token) {
+      return http.get(
+        Uri.parse('$_baseUrl/users/likes/recent?hours=$hours'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    });
+    if (response != null && response.statusCode == 200) {
+      final body = jsonDecode(response.body) as List<dynamic>;
+      return body.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
+  }
+
   // プロフィール写真アップロード用の署名付きURLを取得
   Future<({String uploadUrl, String objectPath, String publicUrl})?> requestProfilePhotoUploadUrl({
     required String contentType,

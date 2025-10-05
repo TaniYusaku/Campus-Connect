@@ -8,6 +8,7 @@ import { authRouter } from './presentation/routers/auth.router'
 import { userRouter } from './presentation/routers/user.router'
 import { encounterRouter } from './presentation/routers/encounter.router'
 import { startRecentEncountersCleanup } from './jobs/cleanup_recent_encounters'
+import { startTempIdsCleanup } from './jobs/cleanup_temp_ids'
 
 try {
     const sa: any = serviceAccount as any;
@@ -65,4 +66,14 @@ if (disableCleanup) {
 } else {
   console.log(`Starting recentEncounters cleanup every ${cleanupIntervalMin} minutes`);
   startRecentEncountersCleanup(cleanupIntervalMin);
+}
+
+// Start periodic cleanup for expired tempIds
+const tempIdsIntervalMin = Number(process.env.TEMPIDS_CLEANUP_INTERVAL_MINUTES ?? '15');
+const disableTempIdsCleanup = process.env.DISABLE_TEMPIDS_CLEANUP === '1' || tempIdsIntervalMin <= 0 || Number.isNaN(tempIdsIntervalMin);
+if (disableTempIdsCleanup) {
+  console.log('tempIds cleanup is disabled');
+} else {
+  console.log(`Starting tempIds cleanup every ${tempIdsIntervalMin} minutes`);
+  startTempIdsCleanup(tempIdsIntervalMin);
 }

@@ -10,7 +10,9 @@ Quick Start
 - Frontend can override API base URL via dart-define:
   - Example: `flutter run --dart-define=API_BASE_URL=http://<LAN_IP>:3000/api`
   - Default (if omitted) is defined in `lib/services/api_service.dart`.
- - Backend cleanup: set `CLEANUP_INTERVAL_MINUTES=60` (default) to control 24h encounter cleanup cadence. To disable, set `DISABLE_CLEANUP=1`.
+ - Backend cleanup:
+   - Encounters: `CLEANUP_INTERVAL_MINUTES=60` (default). Disable with `DISABLE_CLEANUP=1`.
+   - TempIds: `TEMPIDS_CLEANUP_INTERVAL_MINUTES=15` (default). Disable with `DISABLE_TEMPIDS_CLEANUP=1`.
 
 Docs
 - Requirements: `doc/REQUIREMENTS.md`
@@ -33,7 +35,11 @@ BLE Security Summary
 24h TTL (Recent Encounters)
 - The server runs a periodic cleanup that deletes `users/*/recentEncounters/*` older than 24 hours (collection group query), by default every 60 minutes.
 - Production alternative: enable Firestore TTL policy on `recentEncounters.expiresAt` (we now write this field as `lastEncounteredAt + 24h`).
- - If you see `FAILED_PRECONDITION` from the cleanup, create a Composite Index for collection group `recentEncounters` on field `lastEncounteredAt` (ascending), or rely on the built-in fallback which iterates per-user collections.
+- If you see `FAILED_PRECONDITION` from the cleanup, create a Composite Index for collection group `recentEncounters` on field `lastEncounteredAt` (ascending), or rely on the built-in fallback which iterates per-user collections.
+
+TempIds Cleanup
+- Expired tempIds (`tempIds/*` with `expiresAt <= now`) are periodically deleted (default every 15 minutes).
+- Production alternative: enable TTL on `tempIds.expiresAt` and let Firestore auto-delete them.
 
 Security
 - Do NOT commit secrets. Keep `apps/backend/serviceAccountKey.json` out of VCS and rotate if already exposed.

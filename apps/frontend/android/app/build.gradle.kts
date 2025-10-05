@@ -42,3 +42,6 @@ android {
 flutter {
     source = "../.."
 }
+
+// Apply Google Services plugin to read google-services.json (Firebase options)
+apply(plugin = "com.google.gms.google-services")
