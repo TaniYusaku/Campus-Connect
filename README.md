@@ -20,6 +20,15 @@ Docs
 - Tech stack: `apps/backend/doc/tech_stack.md`
 - Implementation status: `doc/IMPLEMENTATION_STATUS.md`
 
+API Endpoints (MVP)
+- `POST /api/auth/register`, `POST /api/auth/login`
+- `GET /api/users/me`, `PUT /api/users/me`, `DELETE /api/users/me`
+- `GET /api/users/encounters`
+- `POST /api/encounters`, `POST /api/encounters/observe`, `POST /api/encounters/register-tempid`
+- `POST /api/users/:userId/like`, `DELETE /api/users/:userId/like` (取り消しは未マッチ時のみ。マッチ済みはブロックを使用)
+- `GET /api/users/friends`, `GET /api/users/blocked`
+- `POST /api/users/:userId/block`, `DELETE /api/users/:userId/block`
+
 BLE (v0) Overview
 - Scan (foreground): `flutter_blue_plus`. In-app filter by Local Name prefix `CC-` or Campus Connect service UUID. RSSI threshold adjustable in UI (default -80 dBm).
 - Advertise (foreground): `ble_peripheral`. Local Name `CC-<tempId>` and minimal GATT service with a read-only characteristic holding the current tempId.

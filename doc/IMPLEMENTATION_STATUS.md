@@ -11,11 +11,11 @@ Backend (Hono)
   - POST `/api/encounters/observe` (tempId観測イベントの受信・相互観測でEncounter生成)
   - POST `/api/encounters/register-tempid` (広告中のtempIdを登録、期限付き)
   - POST `/api/users/:userId/like`（相互いいね成立時に即マッチ作成に変更）
+  - DELETE `/api/users/:userId/like`（いいね取り消し。マッチ成立後は取り消し不可・ブロックを利用）
   - GET `/api/users/friends`
   - GET `/api/users/blocked`
   - POST/DELETE `/api/users/:userId/block`
 - Missing vs requirements
-  - DELETE `/users/{userId}/like`
   - PUT `/users/me/device`
   - GET `/users/{userId}` (public profile)
   - Pagination for list endpoints
@@ -30,6 +30,8 @@ Frontend (Flutter)
   - Token refresh/expiry handling in `ApiService` (proactive + 401 retry)
   - サーバ側の24hクリーンアップジョブ（`recentEncounters`定期削除、1時間毎）
   - サーバ側のtempIdsクリーンアップジョブ（`tempIds`の期限切れ削除、15分毎）
+  - いいねのトグル（いいね/取り消し）。相互成立時は友達リストを自動リフレッシュ
+  - 友達タブ：ブロック/ブロック解除ボタンを追加し、両タブをリフレッシュ
 - Missing vs requirements
   - Navigation post-registration
   - Friends list UI polish（プロフィール写真/SNS、アンブロックなど）
