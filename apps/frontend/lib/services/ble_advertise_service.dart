@@ -22,8 +22,10 @@ class BleAdvertiseService {
   static const _kIdTsKey = 'advertise_id_ts';
   static const Duration _kRotationInterval = Duration(minutes: 15);
 
-  final _statusController = StreamController<({bool advertising, String? error})>.broadcast();
-  Stream<({bool advertising, String? error})> get statusStream => _statusController.stream;
+  final _statusController =
+      StreamController<({bool advertising, String? error})>.broadcast();
+  Stream<({bool advertising, String? error})> get statusStream =>
+      _statusController.stream;
   Stream<String> get idStream => _idController.stream;
 
   Future<String> getOrCreateAdvertiseId() async {
@@ -32,7 +34,10 @@ class BleAdvertiseService {
     final tsStr = await _storage.read(key: _kIdTsKey);
     final now = DateTime.now();
     final ts = int.tryParse(tsStr ?? '');
-    final isFresh = ts != null && now.difference(DateTime.fromMillisecondsSinceEpoch(ts)) < _kRotationInterval;
+    final isFresh =
+        ts != null &&
+        now.difference(DateTime.fromMillisecondsSinceEpoch(ts)) <
+            _kRotationInterval;
     if (existing != null && existing.isNotEmpty && isFresh) {
       _advId = existing;
       _idController.add(existing);
@@ -53,16 +58,20 @@ class BleAdvertiseService {
 
   Future<void> _persistId(String id, DateTime now) async {
     await _storage.write(key: _kIdKey, value: id);
-    await _storage.write(key: _kIdTsKey, value: now.millisecondsSinceEpoch.toString());
+    await _storage.write(
+      key: _kIdTsKey,
+      value: now.millisecondsSinceEpoch.toString(),
+    );
   }
 
   Future<void> _ensurePermissions() async {
     if (Platform.isAndroid) {
-      final req = await [
-        Permission.bluetoothAdvertise,
-        Permission.bluetoothConnect,
-        Permission.bluetoothScan,
-      ].request();
+      final req =
+          await [
+            Permission.bluetoothAdvertise,
+            Permission.bluetoothConnect,
+            Permission.bluetoothScan,
+          ].request();
       if (req.values.any((s) => s.isPermanentlyDenied)) {
         // Best-effort: open app settings if permanently denied
         // ignore: unawaited_futures
@@ -87,19 +96,18 @@ class BleAdvertiseService {
         characteristics: [
           BleCharacteristic(
             uuid: kCcCharacteristicUuid,
-            properties: [
-              CharacteristicProperties.read.index,
-            ],
+            properties: [CharacteristicProperties.read.index],
             value: utf8.encode(id),
-            permissions: [
-              AttributePermissions.readable.index,
-            ],
+            permissions: [AttributePermissions.readable.index],
           ),
         ],
       ),
     );
 
-    BlePeripheral.setAdvertisingStatusUpdateCallback((bool advertising, String? error) {
+    BlePeripheral.setAdvertisingStatusUpdateCallback((
+      bool advertising,
+      String? error,
+    ) {
       _advertising = advertising;
       _statusController.add((advertising: advertising, error: error));
     });
@@ -153,8 +161,13 @@ class BleAdvertiseService {
     final now = DateTime.now();
     Duration wait;
     if (ts != null) {
-      final nextAt = DateTime.fromMillisecondsSinceEpoch(ts).add(_kRotationInterval);
-      wait = nextAt.isAfter(now) ? nextAt.difference(now) : const Duration(seconds: 1);
+      final nextAt = DateTime.fromMillisecondsSinceEpoch(
+        ts,
+      ).add(_kRotationInterval);
+      wait =
+          nextAt.isAfter(now)
+              ? nextAt.difference(now)
+              : const Duration(seconds: 1);
     } else {
       wait = _kRotationInterval;
     }
@@ -177,13 +190,9 @@ class BleAdvertiseService {
             characteristics: [
               BleCharacteristic(
                 uuid: kCcCharacteristicUuid,
-                properties: [
-                  CharacteristicProperties.read.index,
-                ],
+                properties: [CharacteristicProperties.read.index],
                 value: utf8.encode(newId),
-                permissions: [
-                  AttributePermissions.readable.index,
-                ],
+                permissions: [AttributePermissions.readable.index],
               ),
             ],
           ),

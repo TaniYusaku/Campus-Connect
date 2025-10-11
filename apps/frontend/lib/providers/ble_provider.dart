@@ -15,12 +15,14 @@ class BoolPrefNotifier extends StateNotifier<bool> {
   final String key;
   final bool defaultValue;
   final _storage = const FlutterSecureStorage();
-  BoolPrefNotifier({required this.key, required this.defaultValue}) : super(defaultValue);
+  BoolPrefNotifier({required this.key, required this.defaultValue})
+    : super(defaultValue);
   Future<void> load() async {
     final v = await _storage.read(key: key);
     if (v == '1') state = true;
     if (v == '0') state = false;
   }
+
   Future<void> set(bool v) async {
     state = v;
     await _storage.write(key: key, value: v ? '1' : '0');
@@ -28,7 +30,9 @@ class BoolPrefNotifier extends StateNotifier<bool> {
 }
 
 // 連続スキャンモード（デフォルト: OFF）永続化
-final continuousScanProvider = StateNotifierProvider<BoolPrefNotifier, bool>((ref) {
+final continuousScanProvider = StateNotifierProvider<BoolPrefNotifier, bool>((
+  ref,
+) {
   final n = BoolPrefNotifier(key: 'pref_continuous_scan', defaultValue: false);
   n.load();
   return n;
@@ -43,11 +47,13 @@ final ccFilterProvider = StateNotifierProvider<BoolPrefNotifier, bool>((ref) {
 
 // RSSI しきい値（デフォルト -80dBm）
 // RSSI しきい値（デフォルト -80dBm）を端末に保存して維持
-final rssiThresholdProvider = StateNotifierProvider<RssiThresholdNotifier, int>((ref) {
-  final notifier = RssiThresholdNotifier();
-  notifier.load(); // 非同期で保存値を反映
-  return notifier;
-});
+final rssiThresholdProvider = StateNotifierProvider<RssiThresholdNotifier, int>(
+  (ref) {
+    final notifier = RssiThresholdNotifier();
+    notifier.load(); // 非同期で保存値を反映
+    return notifier;
+  },
+);
 
 class RssiThresholdNotifier extends StateNotifier<int> {
   RssiThresholdNotifier() : super(-80);
@@ -82,14 +88,15 @@ class BleScanState {
     List<ScanResult>? results,
     BluetoothAdapterState? adapterState,
   }) => BleScanState(
-        scanning: scanning ?? this.scanning,
-        results: results ?? this.results,
-        adapterState: adapterState ?? this.adapterState,
-      );
+    scanning: scanning ?? this.scanning,
+    results: results ?? this.results,
+    adapterState: adapterState ?? this.adapterState,
+  );
 }
 
-final bleScanProvider =
-    StateNotifierProvider<BleScanNotifier, BleScanState>((ref) {
+final bleScanProvider = StateNotifierProvider<BleScanNotifier, BleScanState>((
+  ref,
+) {
   final service = ref.read(bleServiceProvider);
   return BleScanNotifier(service, ref);
 });
@@ -102,8 +109,13 @@ class BleScanNotifier extends StateNotifier<BleScanState> {
   final Map<String, DateTime> _reported = {}; // advertiseId -> last sent time
 
   BleScanNotifier(this._service, this._ref)
-      : super(const BleScanState(
-            scanning: false, results: [], adapterState: BluetoothAdapterState.unknown)) {
+    : super(
+        const BleScanState(
+          scanning: false,
+          results: [],
+          adapterState: BluetoothAdapterState.unknown,
+        ),
+      ) {
     _adapterSub = _service.adapterState.listen((s) {
       state = state.copyWith(adapterState: s);
     });
@@ -113,12 +125,13 @@ class BleScanNotifier extends StateNotifier<BleScanState> {
       final ccGuid = Guid(kCcServiceUuid);
       List<ScanResult> output = list;
       if (ccOnly) {
-        output = list.where((r) {
-          final ad = r.advertisementData;
-          final hasName = ad.advName.startsWith(kCcLocalNamePrefix);
-          final hasSvc = ad.serviceUuids.contains(ccGuid);
-          return hasName || hasSvc;
-        }).toList();
+        output =
+            list.where((r) {
+              final ad = r.advertisementData;
+              final hasName = ad.advName.startsWith(kCcLocalNamePrefix);
+              final hasSvc = ad.serviceUuids.contains(ccGuid);
+              return hasName || hasSvc;
+            }).toList();
       }
       state = state.copyWith(results: output);
       _handleObservations(output);
@@ -136,7 +149,8 @@ class BleScanNotifier extends StateNotifier<BleScanState> {
         final observedId = adName.substring(kCcLocalNamePrefix.length);
         final last = _reported[observedId];
         // rate-limit: send at most once per 15 minutes per ID (tempID window)
-        if (last == null || now.difference(last) > const Duration(minutes: 15)) {
+        if (last == null ||
+            now.difference(last) > const Duration(minutes: 15)) {
           _reported[observedId] = now;
           final api = _ref.read(apiServiceProvider);
           // fire-and-forget; errors are logged in ApiService

@@ -15,22 +15,9 @@ const List<String> kFacultyOptions = [
   'アントレプレナーシップ学環',
 ];
 
-const List<String> kGenderOptions = [
-  '未設定',
-  '男性',
-  '女性',
-  'その他／回答しない',
-];
+const List<String> kGenderOptions = ['未設定', '男性', '女性', 'その他／回答しない'];
 
-const List<String> kGradeOptions = [
-  '未設定',
-  '1',
-  '2',
-  '3',
-  '4',
-  'M1',
-  'M2',
-];
+const List<String> kGradeOptions = ['未設定', '1', '2', '3', '4', 'M1', 'M2'];
 
 const List<String> kBioTemplates = [
   'よろしくお願いします！',
@@ -38,4 +25,3 @@ const List<String> kBioTemplates = [
   '音楽とカフェが好きです。',
   'スポーツ観戦が好きです。',
 ];
-

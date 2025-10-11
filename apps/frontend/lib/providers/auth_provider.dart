@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../providers/api_provider.dart';
+import '../providers/liked_history_provider.dart';
+import '../providers/like_provider.dart';
 
 enum AuthState { checking, authenticated, unauthenticated }
 
@@ -41,6 +43,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.delete(key: 'auth_token');
     await _storage.delete(key: 'refresh_token');
     await _storage.delete(key: 'auth_expires_at');
+    await _ref.read(likedHistoryProvider.notifier).clear();
+    _ref.read(likedSetProvider.notifier).clear();
     state = AuthState.unauthenticated;
   }
-} 
+}

@@ -25,14 +25,19 @@ class User {
     final rawLinks = json['snsLinks'];
     Map<String, String>? links;
     if (rawLinks is Map) {
-      links = rawLinks.map((key, value) => MapEntry(key.toString(), value?.toString() ?? ''));
+      links = rawLinks.map(
+        (key, value) => MapEntry(key.toString(), value?.toString() ?? ''),
+      );
     }
     return User(
       id: json['id'] as String,
       username: (json['userName'] ?? '名無しさん') as String,
       email: json['email'] as String?,
       faculty: (json['faculty'] ?? '未設定') as String?,
-      grade: (json['grade'] is int) ? json['grade'] as int : int.tryParse('${json['grade'] ?? ''}'),
+      grade:
+          (json['grade'] is int)
+              ? json['grade'] as int
+              : int.tryParse('${json['grade'] ?? ''}'),
       bio: json['bio'] as String?,
       profilePhotoUrl: json['profilePhotoUrl'] as String?,
       snsLinks: links,

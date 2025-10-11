@@ -42,10 +42,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                TextButton(
-                  onPressed: _finish,
-                  child: const Text('スキップ'),
-                ),
+                TextButton(onPressed: _finish, child: const Text('スキップ')),
                 Row(
                   children: List.generate(
                     pages.length,
@@ -55,7 +52,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: i == _index ? Theme.of(context).colorScheme.primary : Colors.grey[400],
+                        color:
+                            i == _index
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey[400],
                       ),
                     ),
                   ),
@@ -63,7 +63,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     if (_index < pages.length - 1) {
-                      _controller.nextPage(duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+                      _controller.nextPage(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeInOut,
+                      );
                     } else {
                       await _finish();
                     }
@@ -85,7 +88,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Text(subtitle, textAlign: TextAlign.center),
           ],
@@ -94,4 +100,3 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 }
-

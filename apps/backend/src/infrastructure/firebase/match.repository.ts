@@ -25,4 +25,16 @@ export class MatchRepository implements IMatchRepository {
     }
     return snapshot.docs.map(doc => doc.id);
   }
-} 
+
+  async deletePair(userId1: string, userId2: string): Promise<void> {
+    const db = getFirestore();
+    const match1Ref = db.collection('users').doc(userId1).collection('matches').doc(userId2);
+    const match2Ref = db.collection('users').doc(userId2).collection('matches').doc(userId1);
+
+    const batch = db.batch();
+    batch.delete(match1Ref);
+    batch.delete(match2Ref);
+
+    await batch.commit();
+  }
+}

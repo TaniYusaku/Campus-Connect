@@ -190,14 +190,59 @@ userRouter.post('/:userId/block', async (c) => {
     return c.json({ error: 'You cannot block yourself.' }, 400);
   }
   await blockRepository.create(blockerId, blockedId);
+  // Ensure both sides no longer see each other in likes, friends, or encounters.
+  await likeRepository.delete(blockerId, blockedId);
+  await likeRepository.delete(blockedId, blockerId);
+  await matchRepository.deletePair(blockerId, blockedId);
+  await encounterRepository.deleteBetween(blockerId, blockedId);
   return c.json({ message: 'User blocked successfully' }, 201);
 });
 
-userRouter.delete('/:userId/block', async (c) => {
-  const blockerId = c.get('user').uid;
-  const blockedId = c.req.param('userId');
-  await blockRepository.delete(blockerId, blockedId);
-  return c.json({ message: 'User unblocked successfully' });
+userRouter.get('/:userId', async (c) => {
+  const viewerId = c.get('user').uid as string;
+  const targetId = c.req.param('userId');
+
+  if (!targetId || targetId.length === 0) {
+    return c.json({ error: 'Invalid userId' }, 400);
+  }
+
+  if (targetId === 'me') {
+    const me = await userRepository.findById(viewerId);
+    if (!me) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+    const { email, ...publicSelf } = me;
+    return c.json(publicSelf);
+  }
+
+  try {
+    const targetUser = await userRepository.findById(targetId);
+    if (!targetUser) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    const myBlocked = await blockRepository.findAllIds(viewerId);
+    if (myBlocked.includes(targetId)) {
+      return c.json({ error: 'User is blocked' }, 403);
+    }
+
+    const targetBlocked = await blockRepository.findAllIds(targetId);
+    if (targetBlocked.includes(viewerId)) {
+      return c.json({ error: 'Access denied' }, 403);
+    }
+
+    const { email, ...publicProfile } = targetUser;
+    const profileCopy: any = { ...publicProfile };
+    const viewerFriends = await matchRepository.findAll(viewerId);
+    const isFriend = viewerFriends.includes(targetId);
+    if (!isFriend) {
+      delete profileCopy.snsLinks;
+    }
+    return c.json(profileCopy);
+  } catch (error) {
+    console.error('Failed to fetch public profile:', error);
+    return c.json({ error: 'Failed to fetch user' }, 500);
+  }
 });
 
 // ▼▼▼ テスト用のエンドポイントを削除しました ▼▼▼ 

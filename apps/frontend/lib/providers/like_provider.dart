@@ -8,6 +8,9 @@ class LikedSetNotifier extends StateNotifier<Set<String>> {
     next.remove(userId);
     state = next;
   }
+
+  void clear() => state = <String>{};
+
   bool isLiked(String userId) => state.contains(userId);
 }
 

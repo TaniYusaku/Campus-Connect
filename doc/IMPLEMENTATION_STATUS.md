@@ -1,48 +1,51 @@
 # Implementation Status
 
-This document summarizes current code vs documented requirements.
+This document summarizes the current implementation versus the documented requirements.
 
-Backend (Hono)
-- Implemented
-  - POST `/api/auth/register`, POST `/api/auth/login`
-  - GET `/api/users/me`, PUT `/api/users/me`, DELETE `/api/users/me`
-  - GET `/api/users/encounters`
-  - POST `/api/encounters`
-  - POST `/api/encounters/observe` (tempId観測イベントの受信・相互観測でEncounter生成)
-  - POST `/api/encounters/register-tempid` (広告中のtempIdを登録、期限付き)
-  - POST `/api/users/:userId/like`（相互いいね成立時に即マッチ作成に変更）
-  - DELETE `/api/users/:userId/like`（いいね取り消し。マッチ成立後は取り消し不可・ブロックを利用）
-  - GET `/api/users/friends`
-  - GET `/api/users/blocked`
-  - POST/DELETE `/api/users/:userId/block`
-- Missing vs requirements
-  - PUT `/users/me/device`
-  - GET `/users/{userId}` (public profile)
-  - Pagination for list endpoints
-  - Firestore TTLポリシー適用（任意・推奨、`recentEncounters.expiresAt` フィールド）
+## Backend (Hono)
+### 実装済み
+- POST `/api/auth/register`, POST `/api/auth/login`, POST `/api/auth/refresh`
+- GET `/api/users/me`, PUT `/api/users/me`, DELETE `/api/users/me`
+- GET `/api/users/encounters`
+- POST `/api/encounters`
+- POST `/api/encounters/observe`（tempId観測イベントの受信・相互観測でEncounter生成）
+- POST `/api/encounters/register-tempid`（広告中のtempIdを登録、期限付き）
+- POST `/api/users/:userId/like`（相互いいね成立時に即マッチ作成）
+- DELETE `/api/users/:userId/like`（マッチ前のみ取り消し可）
+- GET `/api/users/friends`
+- POST `/api/users/:userId/block`（ブロック解除は仕様として提供しない）
+- GET `/api/users/blocked`
+- GET `/api/users/likes/recent`
+- GET `/api/users/:userId`（公開プロフィール取得）
+  - 友達でない閲覧者には `snsLinks` を除外
 
-Frontend (Flutter)
-- Implemented
-  - Register/Login screens and state management
-  - Encounters list consuming `/api/users/encounters`
-  - BLE scan screen (foreground) with RSSI threshold & CC filter
-  - BLE advertising via `ble_peripheral`, tempId rotation (15min) and backend registration
-  - Token refresh/expiry handling in `ApiService` (proactive + 401 retry)
-  - サーバ側の24hクリーンアップジョブ（`recentEncounters`定期削除、1時間毎）
-  - サーバ側のtempIdsクリーンアップジョブ（`tempIds`の期限切れ削除、15分毎）
-  - いいねのトグル（いいね/取り消し）。相互成立時は友達リストを自動リフレッシュ
-  - 友達タブ：ブロック/ブロック解除ボタンを追加し、両タブをリフレッシュ
-- Missing vs requirements
-  - Navigation post-registration
-  - Friends list UI polish（プロフィール写真/SNS、アンブロックなど）
-  - Profile edit (photo/bio/hobbies/SNS)
-  - BLE: バックグラウンド動作対応（省電力/OS制約考慮）
+### 要件との差分 / 未対応項目
+- PUT `/users/me/device`（通知用デバイストークン登録）
+- 各一覧APIのページネーション
+- Firestore TTLポリシーの導入（`recentEncounters.expiresAt` など、任意だが推奨）
 
-Security/Operational
-- `apps/backend/serviceAccountKey.json` exists in repo; keep out of VCS and rotate if leaked.
-- `.env` carries `FIREBASE_WEB_API_KEY` for REST login.
+## Frontend (Flutter)
+### 実装済み
+- 登録 / ログイン画面および状態管理
+- Encountersタブ：`/api/users/encounters` を表示し、いいね／取り消し／ブロック操作に対応
+- Friendsタブ：マッチ済みユーザー一覧表示、プロフィールモーダル表示、ブロック操作
+- Profileタブ：プロフィール編集（写真アップロード、自己紹介、学部・学年、SNSリンクなど）
+- BLE Scan画面：フォアグラウンドスキャン、RSSIしきい値調整、Campus Connectフィルタ切り替え
+- BLE Advertise：15分ごとのtempIdローテーションとバックエンド登録
+- `ApiService` 内でのトークンリフレッシュ（期限前更新＋401リトライ）
+- 設定画面：通知トグル、ブロック一覧、ログアウト／退会導線
 
-Notes
-- Docs updated to reflect Hono-based server (was TBD/Cloud Functions leaning).
- - BLE docs aligned to plugin-based v0 plan (no background yet).
- - 要件更新: マッチは相互いいね時に即成立。再会時の通知は後続で実装予定。
+### 要件との差分 / 未対応項目
+- 登録完了後のナビゲーション改善（オンボーディング／ホーム遷移のUX調整）
+- Friends画面のUIブラッシュアップ（タイル表示やプロフィール要素の強化）
+- マッチ成立時の演出（ポップアップ等）
+- BLEのバックグラウンド対応（将来検討事項）
+
+## Security / Operational Notes
+- Firebaseサービスアカウント鍵は `.gitignore` 対象。コミットしない運用を継続し、必要に応じ `.env` や秘密管理ストアに保存する。
+- `FIREBASE_WEB_API_KEY` などの環境変数は `.env` などでローカル管理する。
+
+## メモ
+- ドキュメントはHonoベースAPI構成に合わせて更新済み。
+- BLE設計はv0想定（フォアグラウンドのみ）。バックグラウンド対応は後続タスクとする。
+- マッチは相互いいね成立時に即成立。再会通知は将来追加予定。

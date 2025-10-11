@@ -14,7 +14,8 @@ class BleService {
     return await FlutterBluePlus.isSupported;
   }
 
-  Stream<BluetoothAdapterState> get adapterState => FlutterBluePlus.adapterState;
+  Stream<BluetoothAdapterState> get adapterState =>
+      FlutterBluePlus.adapterState;
 
   Future<void> startScan({
     Duration? timeout, // null = 連続スキャン（タイムアウト無し）
@@ -34,9 +35,7 @@ class BleService {
           withServices: [Guid(kCcServiceUuid)],
         );
       } else {
-        await FlutterBluePlus.startScan(
-          withServices: [Guid(kCcServiceUuid)],
-        );
+        await FlutterBluePlus.startScan(withServices: [Guid(kCcServiceUuid)]);
       }
     } else {
       if (timeout != null) {
@@ -55,12 +54,13 @@ class BleService {
 
   Future<void> _ensurePermissions() async {
     if (Platform.isAndroid) {
-      final req = await [
-        Permission.bluetoothScan,
-        Permission.bluetoothConnect,
-        // For Android 11 or lower, location permission is required for BLE scans
-        Permission.locationWhenInUse,
-      ].request();
+      final req =
+          await [
+            Permission.bluetoothScan,
+            Permission.bluetoothConnect,
+            // For Android 11 or lower, location permission is required for BLE scans
+            Permission.locationWhenInUse,
+          ].request();
       if (req.values.any((s) => s.isPermanentlyDenied)) {
         // Best-effort: guide user to settings if denied permanently
         // ignore: unawaited_futures

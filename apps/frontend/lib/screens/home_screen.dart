@@ -4,6 +4,7 @@ import 'package:frontend/providers/auth_provider.dart';
 import 'package:frontend/screens/tab_screens/encounter_screen.dart';
 import 'package:frontend/screens/tab_screens/friends_list_screen.dart';
 import 'package:frontend/screens/tab_screens/profile_screen.dart';
+import 'package:frontend/screens/settings_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -35,18 +36,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.settings),
+            tooltip: '設定',
             onPressed: () {
-              ref.read(authProvider.notifier).logout();
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
             },
-            tooltip: 'ログアウト',
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _widgetOptions,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _widgetOptions),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -67,4 +67,4 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
-} 
+}

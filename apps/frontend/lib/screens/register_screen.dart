@@ -42,21 +42,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
     // Validate dropdowns
     if (_selectedFaculty == null || _selectedFaculty == '未設定') {
-      setState(() { _isLoading = false; _errorMessage = '学部を選択してください'; });
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '学部を選択してください';
+      });
       return;
     }
     if (_selectedGradeStr == null || _selectedGradeStr == '未設定') {
-      setState(() { _isLoading = false; _errorMessage = '学年を選択してください'; });
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '学年を選択してください';
+      });
       return;
     }
     if (_selectedGender == null || _selectedGender == '未設定') {
-      setState(() { _isLoading = false; _errorMessage = '性別を選択してください'; });
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '性別を選択してください';
+      });
       return;
     }
     int gradeInt;
-    if (_selectedGradeStr == 'M1') gradeInt = 5;
-    else if (_selectedGradeStr == 'M2') gradeInt = 6;
-    else gradeInt = int.tryParse(_selectedGradeStr!) ?? 1;
+    if (_selectedGradeStr == 'M1')
+      gradeInt = 5;
+    else if (_selectedGradeStr == 'M2')
+      gradeInt = 6;
+    else
+      gradeInt = int.tryParse(_selectedGradeStr!) ?? 1;
     final result = await _apiService.register(
       userName: _userNameController.text.trim(),
       email: _emailController.text.trim(),
@@ -70,23 +82,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
     if (result.success) {
       // 登録成功 → 即ログインしてホームへ
-      final loggedIn = await authNotifier
-          .login(_emailController.text.trim(), _passwordController.text);
+      final loggedIn = await authNotifier.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
       if (loggedIn) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('登録してログインしました')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('登録してログインしました')));
         // オンボーディング（初回のみ）へ遷移
         if (!mounted) return;
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const OnboardingScreen()));
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('登録は成功しましたが、ログインに失敗しました')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('登録は成功しましたが、ログインに失敗しました')));
       }
     } else {
       setState(() {
@@ -109,23 +123,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextFormField(
                 controller: _userNameController,
                 decoration: const InputDecoration(labelText: 'ニックネーム'),
-                validator: (value) => value == null || value.isEmpty ? '入力してください' : null,
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty ? '入力してください' : null,
               ),
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'メールアドレス'),
                 keyboardType: TextInputType.emailAddress,
-                validator: (value) => value == null || value.isEmpty ? '入力してください' : null,
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty ? '入力してください' : null,
               ),
               TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'パスワード'),
                 obscureText: true,
-                validator: (value) => value == null || value.length < 6 ? '6文字以上で入力してください' : null,
+                validator:
+                    (value) =>
+                        value == null || value.length < 6
+                            ? '6文字以上で入力してください'
+                            : null,
               ),
               DropdownButtonFormField<String>(
                 value: _selectedFaculty,
-                items: kFacultyOptions.map((f) => DropdownMenuItem<String>(value: f, child: Text(f))).toList(),
+                items:
+                    kFacultyOptions
+                        .map(
+                          (f) => DropdownMenuItem<String>(
+                            value: f,
+                            child: Text(f),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (v) => setState(() => _selectedFaculty = v),
                 validator: (v) => (v == null || v == '未設定') ? '学部は必須です' : null,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -133,7 +163,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               DropdownButtonFormField<String>(
                 value: _selectedGradeStr,
-                items: kGradeOptions.map((g) => DropdownMenuItem<String>(value: g, child: Text(g))).toList(),
+                items:
+                    kGradeOptions
+                        .map(
+                          (g) => DropdownMenuItem<String>(
+                            value: g,
+                            child: Text(g),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (v) => setState(() => _selectedGradeStr = v),
                 validator: (v) => (v == null || v == '未設定') ? '学年は必須です' : null,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -141,7 +179,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               DropdownButtonFormField<String>(
                 value: _selectedGender,
-                items: kGenderOptions.map((g) => DropdownMenuItem<String>(value: g, child: Text(g))).toList(),
+                items:
+                    kGenderOptions
+                        .map(
+                          (g) => DropdownMenuItem<String>(
+                            value: g,
+                            child: Text(g),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (v) => setState(() => _selectedGender = v),
                 validator: (v) => (v == null || v == '未設定') ? '性別は必須です' : null,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -163,7 +209,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
                   );
                 },
                 child: const Text('すでにアカウントをお持ちですか？ ログイン'),
@@ -178,4 +226,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-} 
+}

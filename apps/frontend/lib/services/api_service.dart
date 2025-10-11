@@ -20,9 +20,9 @@ class ApiService {
   // ベースURLは --dart-define で上書き可能（例: --dart-define=API_BASE_URL=http://192.168.0.79:3000/api）
   final String _baseUrl = const String.fromEnvironment(
     'API_BASE_URL',
-    //192.168.0.79 家のWifi
+    
     //192.168.111.145
-    defaultValue: 'http://192.168.0.79:3000/api',
+    defaultValue: 'http://192.168.0.88:3000/api',
   );
 
   // Concurrency guard for refresh
@@ -41,7 +41,10 @@ class ApiService {
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       final skew = 30; // seconds
       final expiresAtMs = nowMs + (seconds - skew).clamp(10, seconds) * 1000;
-      await _storage.write(key: 'auth_expires_at', value: expiresAtMs.toString());
+      await _storage.write(
+        key: 'auth_expires_at',
+        value: expiresAtMs.toString(),
+      );
     } catch (_) {
       // ignore
     }
@@ -88,7 +91,10 @@ class ApiService {
       } else if (response.statusCode == 409) {
         return RegisterResult.err('email_exists', 'このメールアドレスは既に使われています');
       } else {
-        return RegisterResult.err('server', '登録に失敗しました (${response.statusCode})');
+        return RegisterResult.err(
+          'server',
+          '登録に失敗しました (${response.statusCode})',
+        );
       }
     } catch (e) {
       // Network or other errors
@@ -101,10 +107,7 @@ class ApiService {
       final response = await http.post(
         Uri.parse('$_baseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
       if (response.statusCode == 200) {
@@ -143,11 +146,29 @@ class ApiService {
 
     if (response != null && response.statusCode == 200) {
       List<dynamic> body = jsonDecode(response.body);
-      List<User> users = body.map((dynamic item) => User.fromJson(item)).toList();
+      List<User> users =
+          body.map((dynamic item) => User.fromJson(item)).toList();
       return users;
     } else {
       throw Exception('Failed to load encounters');
     }
+  }
+
+  Future<List<User>> getBlockedUsers() async {
+    final response = await _authorizedRequest((token) {
+      return http.get(
+        Uri.parse('$_baseUrl/users/blocked'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    });
+    if (response != null && response.statusCode == 200) {
+      final body = jsonDecode(response.body) as List<dynamic>;
+      return body.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
   }
 
   // 観測したアドバタイズIDをサーバーへ送信（仮API: POST /api/encounters/observe）
@@ -174,7 +195,9 @@ class ApiService {
       });
       if (response == null) return false;
       if (response.statusCode >= 400) {
-        print('postObservation failed: ${response.statusCode} ${response.body}');
+        print(
+          'postObservation failed: ${response.statusCode} ${response.body}',
+        );
         return false;
       }
       // 201 = mutual encounter recorded
@@ -201,7 +224,8 @@ class ApiService {
           },
           body: jsonEncode({
             'tempId': tempId,
-            if (expiresAt != null) 'expiresAt': expiresAt.toUtc().toIso8601String(),
+            if (expiresAt != null)
+              'expiresAt': expiresAt.toUtc().toIso8601String(),
           }),
         );
       });
@@ -230,6 +254,34 @@ class ApiService {
       return User.fromJson(body);
     }
     return null;
+  }
+
+  Future<User?> getPublicProfile(String userId) async {
+    final uri = Uri.parse('$_baseUrl/users/$userId');
+    final response = await _authorizedRequest((token) {
+      return http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    });
+    if (response == null) return null;
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      return User.fromJson(body);
+    }
+    if (response.statusCode == 404) {
+      return null;
+    }
+    if (response.statusCode == 403) {
+      throw HttpException('Access denied', uri: uri);
+    }
+    throw HttpException(
+      'Failed to load profile (${response.statusCode})',
+      uri: uri,
+    );
   }
 
   // 自分のプロフィールを更新（部分更新）
@@ -320,41 +372,10 @@ class ApiService {
     return response.statusCode >= 200 && response.statusCode < 300;
   }
 
-  Future<bool> unblockUser(String userId) async {
-    final response = await _authorizedRequest((token) {
-      return http.delete(
-        Uri.parse('$_baseUrl/users/$userId/block'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-    });
-    if (response == null) return false;
-    return response.statusCode >= 200 && response.statusCode < 300;
-  }
-
   Future<List<User>> getFriends() async {
     final response = await _authorizedRequest((token) {
       return http.get(
         Uri.parse('$_baseUrl/users/friends'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-    });
-    if (response != null && response.statusCode == 200) {
-      final body = jsonDecode(response.body) as List<dynamic>;
-      return body.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
-    }
-    return [];
-  }
-
-  Future<List<User>> getBlockedUsers() async {
-    final response = await _authorizedRequest((token) {
-      return http.get(
-        Uri.parse('$_baseUrl/users/blocked'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -387,9 +408,8 @@ class ApiService {
   }
 
   // プロフィール写真アップロード用の署名付きURLを取得
-  Future<({String uploadUrl, String objectPath, String publicUrl})?> requestProfilePhotoUploadUrl({
-    required String contentType,
-  }) async {
+  Future<({String uploadUrl, String objectPath, String publicUrl})?>
+  requestProfilePhotoUploadUrl({required String contentType}) async {
     final response = await _authorizedRequest((token) {
       return http.post(
         Uri.parse('$_baseUrl/users/me/profile-photo/upload-url'),
@@ -397,7 +417,7 @@ class ApiService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({ 'contentType': contentType }),
+        body: jsonEncode({'contentType': contentType}),
       );
     });
     if (response != null && response.statusCode == 200) {
@@ -412,9 +432,7 @@ class ApiService {
   }
 
   // アップロード完了をサーバーへ通知してURLをプロファイルに反映
-  Future<User?> confirmProfilePhoto({
-    required String objectPath,
-  }) async {
+  Future<User?> confirmProfilePhoto({required String objectPath}) async {
     final response = await _authorizedRequest((token) {
       return http.post(
         Uri.parse('$_baseUrl/users/me/profile-photo/confirm'),
@@ -422,7 +440,7 @@ class ApiService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({ 'objectPath': objectPath }),
+        body: jsonEncode({'objectPath': objectPath}),
       );
     });
     if (response != null && response.statusCode == 200) {
@@ -432,9 +450,23 @@ class ApiService {
     return null;
   }
 
+  Future<bool> deleteAccount() async {
+    final response = await _authorizedRequest((token) {
+      return http.delete(
+        Uri.parse('$_baseUrl/users/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    });
+    return response != null && response.statusCode >= 200 && response.statusCode < 300;
+  }
+
   // 認証付きリクエストを実行。401ならトークンを更新して1回だけリトライ。
   Future<http.Response?> _authorizedRequest(
-      Future<http.Response> Function(String token) doRequest) async {
+    Future<http.Response> Function(String token) doRequest,
+  ) async {
     String? token = await _getValidToken();
     if (token == null) return null;
     http.Response resp = await doRequest(token);

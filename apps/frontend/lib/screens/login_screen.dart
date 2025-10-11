@@ -26,9 +26,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _login() async {
     // ステップ1: 簡単な入力チェック
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('メールアドレスとパスワードを入力してください')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('メールアドレスとパスワードを入力してください')));
       return; // 何もせず処理を終了
     }
 
@@ -37,22 +37,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     // ステップ2: authProviderを呼び出し、結果を受け取る
-    final success = await ref.read(authProvider.notifier).login(
-          _emailController.text,
-          _passwordController.text,
-        );
+    final success = await ref
+        .read(authProvider.notifier)
+        .login(_emailController.text, _passwordController.text);
 
     // ステップ3: 成功した場合のみ画面を閉じる
     if (success) {
-      if(mounted) Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop();
       return;
     }
 
     // ステップ4: 失敗した場合はエラー表示をして画面に留まる
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('メールアドレスまたはパスワードが違います')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('メールアドレスまたはパスワードが違います')));
       setState(() {
         _isLoading = false;
       });
@@ -62,9 +61,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ログイン'),
-      ),
+      appBar: AppBar(title: const Text('ログイン')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -84,17 +81,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _isLoading ? null : _login,
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('ログイン'),
+              child:
+                  _isLoading
+                      ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : const Text('ログイン'),
             ),
           ],
         ),
       ),
     );
   }
-} 
+}

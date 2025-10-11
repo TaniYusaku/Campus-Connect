@@ -26,8 +26,8 @@ API Endpoints (MVP)
 - `GET /api/users/encounters`
 - `POST /api/encounters`, `POST /api/encounters/observe`, `POST /api/encounters/register-tempid`
 - `POST /api/users/:userId/like`, `DELETE /api/users/:userId/like` (取り消しは未マッチ時のみ。マッチ済みはブロックを使用)
-- `GET /api/users/friends`, `GET /api/users/blocked`
-- `POST /api/users/:userId/block`, `DELETE /api/users/:userId/block`
+- `GET /api/users/friends`
+- `POST /api/users/:userId/block`（解除不可。ブロックすると互いの友達・すれ違いリストから除外）
 
 BLE (v0) Overview
 - Scan (foreground): `flutter_blue_plus`. In-app filter by Local Name prefix `CC-` or Campus Connect service UUID. RSSI threshold adjustable in UI (default -80 dBm).

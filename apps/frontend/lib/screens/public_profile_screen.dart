@@ -1,0 +1,163 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/models/user.dart';
+import 'package:frontend/providers/public_profile_provider.dart';
+
+class PublicProfileScreen extends ConsumerWidget {
+  const PublicProfileScreen({super.key, required this.userId, this.initialUser});
+
+  final String userId;
+  final User? initialUser;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncProfile = ref.watch(publicProfileProvider(userId));
+    final fallbackUser = initialUser;
+    final displayUser = asyncProfile.maybeWhen(
+      data: (value) => value ?? fallbackUser,
+      orElse: () => fallbackUser,
+    );
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(displayUser?.username ?? 'プロフィール'),
+      ),
+      body: asyncProfile.when(
+        data: (user) {
+          final resolved = user ?? displayUser;
+          if (resolved == null) {
+            return const Center(child: Text('ユーザー情報を取得できませんでした'));
+          }
+          return buildPublicProfileContent(context, resolved);
+        },
+        loading: () {
+          if (displayUser != null) {
+            return buildPublicProfileContent(context, displayUser);
+          }
+          return const Center(child: CircularProgressIndicator());
+        },
+        error: (error, stack) {
+          if (displayUser != null) {
+            return buildPublicProfileContent(context, displayUser);
+          }
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('プロフィールの取得に失敗しました: $error'),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+String _gradeLabel(int? grade) {
+  if (grade == null) return '学年未設定';
+  switch (grade) {
+    case 5:
+      return 'M1';
+    case 6:
+      return 'M2';
+    default:
+      return '${grade}年';
+  }
+}
+
+Widget _snsIcon(String key) {
+  final lower = key.toLowerCase();
+  switch (lower) {
+    case 'instagram':
+      return const Icon(Icons.camera_alt_outlined);
+    case 'x':
+    case 'twitter':
+      return const Icon(Icons.alternate_email);
+    default:
+      return const Icon(Icons.link);
+  }
+}
+
+Widget buildPublicProfileContent(BuildContext context, User user,
+    {Widget? headerAction}) {
+  final snsEntries = user.snsLinks?.entries
+          .where((entry) => entry.value.trim().isNotEmpty)
+          .toList() ??
+      const [];
+  final faculty = user.faculty ?? '学部未設定';
+  final gradeLabel = _gradeLabel(user.grade);
+  final genderLabel = user.gender ?? '未設定';
+
+  return ListView(
+    padding: const EdgeInsets.all(16),
+    physics: const AlwaysScrollableScrollPhysics(),
+    children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 48,
+              backgroundImage:
+                  (user.profilePhotoUrl != null && user.profilePhotoUrl!.isNotEmpty)
+                      ? NetworkImage(user.profilePhotoUrl!)
+                      : null,
+              child: (user.profilePhotoUrl == null ||
+                      user.profilePhotoUrl!.isEmpty)
+                  ? const Icon(Icons.person, size: 48)
+                  : null,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.username,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$faculty • $gradeLabel • $genderLabel',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (headerAction != null) ...[
+          const SizedBox(height: 16),
+          headerAction,
+        ],
+        const SizedBox(height: 24),
+        if (user.bio != null && user.bio!.trim().isNotEmpty) ...[
+          Text('自己紹介', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text(
+            user.bio!,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 24),
+        ],
+        if (snsEntries.isNotEmpty) ...[
+          Text('SNS', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          ...snsEntries.map((entry) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: _snsIcon(entry.key),
+                title: Text(entry.key.toUpperCase()),
+                subtitle: Text(entry.value),
+              )),
+          const SizedBox(height: 24),
+        ],
+        Text('最近のアクティビティ', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        const Text(
+          'すれ違いや友達機能は今後さらに充実予定です。',
+          style: TextStyle(color: Colors.grey),
+        ),
+      ],
+  );
+}

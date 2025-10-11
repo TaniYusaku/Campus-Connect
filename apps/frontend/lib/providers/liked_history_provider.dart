@@ -19,22 +19,23 @@ class LikedEntry {
   });
 
   Map<String, dynamic> toJson() => {
-        'userId': userId,
-        'username': username,
-        'faculty': faculty,
-        'grade': grade,
-        'likedAtMs': likedAtMs,
-      };
+    'userId': userId,
+    'username': username,
+    'faculty': faculty,
+    'grade': grade,
+    'likedAtMs': likedAtMs,
+  };
 
   static LikedEntry fromJson(Map<String, dynamic> json) => LikedEntry(
-        userId: json['userId'] as String,
-        username: (json['username'] ?? '名無しさん') as String,
-        faculty: json['faculty'] as String?,
-        grade: (json['grade'] is int)
+    userId: json['userId'] as String,
+    username: (json['username'] ?? '名無しさん') as String,
+    faculty: json['faculty'] as String?,
+    grade:
+        (json['grade'] is int)
             ? json['grade'] as int
             : int.tryParse('${json['grade'] ?? ''}'),
-        likedAtMs: (json['likedAtMs'] as num).toInt(),
-      );
+    likedAtMs: (json['likedAtMs'] as num).toInt(),
+  );
 }
 
 class LikedHistoryNotifier extends StateNotifier<List<LikedEntry>> {
@@ -51,12 +52,14 @@ class LikedHistoryNotifier extends StateNotifier<List<LikedEntry>> {
       return;
     }
     try {
-      final list = (jsonDecode(raw) as List)
-          .map((e) => LikedEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final list =
+          (jsonDecode(raw) as List)
+              .map((e) => LikedEntry.fromJson(e as Map<String, dynamic>))
+              .toList();
       final now = DateTime.now().millisecondsSinceEpoch;
-      final fresh = list.where((e) => now - e.likedAtMs <= _ttlMs).toList()
-        ..sort((a, b) => b.likedAtMs.compareTo(a.likedAtMs));
+      final fresh =
+          list.where((e) => now - e.likedAtMs <= _ttlMs).toList()
+            ..sort((a, b) => b.likedAtMs.compareTo(a.likedAtMs));
       state = fresh;
       // persist pruned
       await _save();
@@ -103,16 +106,22 @@ class LikedHistoryNotifier extends StateNotifier<List<LikedEntry>> {
     }
   }
 
+  Future<void> clear() async {
+    state = const [];
+    await _storage.delete(key: _key);
+  }
+
   Future<void> _save() async {
     final jsonList = state.map((e) => e.toJson()).toList();
     await _storage.write(key: _key, value: jsonEncode(jsonList));
   }
 }
 
-final likedHistoryProvider = StateNotifierProvider<LikedHistoryNotifier, List<LikedEntry>>((ref) {
-  final n = LikedHistoryNotifier();
-  // best-effort async load
-  // ignore: unawaited_futures
-  n.load();
-  return n;
-});
+final likedHistoryProvider =
+    StateNotifierProvider<LikedHistoryNotifier, List<LikedEntry>>((ref) {
+      final n = LikedHistoryNotifier();
+      // best-effort async load
+      // ignore: unawaited_futures
+      n.load();
+      return n;
+    });

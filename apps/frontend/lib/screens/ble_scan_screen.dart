@@ -15,10 +15,9 @@ class BleScanScreen extends ConsumerWidget {
     final advNotifier = ref.read(bleAdvertiseProvider.notifier);
     final threshold = ref.watch(rssiThresholdProvider);
 
-    final results = state.results
-        .where((r) => r.rssi >= threshold)
-        .toList()
-      ..sort((a, b) => b.rssi.compareTo(a.rssi));
+    final results =
+        state.results.where((r) => r.rssi >= threshold).toList()
+          ..sort((a, b) => b.rssi.compareTo(a.rssi));
 
     return Scaffold(
       appBar: AppBar(title: const Text('BLE Scan (v0)')),
@@ -46,13 +45,18 @@ class BleScanScreen extends ConsumerWidget {
                       children: [
                         const Text('Continuous'),
                         const SizedBox(width: 6),
-                        Consumer(builder: (context, ref, _) {
-                          final on = ref.watch(continuousScanProvider);
-                          return Switch(
-                            value: on,
-                            onChanged: (v) => ref.read(continuousScanProvider.notifier).set(v),
-                          );
-                        }),
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final on = ref.watch(continuousScanProvider);
+                            return Switch(
+                              value: on,
+                              onChanged:
+                                  (v) => ref
+                                      .read(continuousScanProvider.notifier)
+                                      .set(v),
+                            );
+                          },
+                        ),
                       ],
                     ),
                     Row(
@@ -60,23 +64,35 @@ class BleScanScreen extends ConsumerWidget {
                       children: [
                         const Text('CC only'),
                         const SizedBox(width: 6),
-                        Consumer(builder: (context, ref, _) {
-                          final ccOnly = ref.watch(ccFilterProvider);
-                          return Switch(
-                            value: ccOnly,
-                            onChanged: (v) => ref.read(ccFilterProvider.notifier).set(v),
-                          );
-                        }),
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final ccOnly = ref.watch(ccFilterProvider);
+                            return Switch(
+                              value: ccOnly,
+                              onChanged:
+                                  (v) => ref
+                                      .read(ccFilterProvider.notifier)
+                                      .set(v),
+                            );
+                          },
+                        ),
                       ],
                     ),
                     ElevatedButton(
                       onPressed:
-                          state.scanning ? notifier.stopScan : notifier.startScan,
+                          state.scanning
+                              ? notifier.stopScan
+                              : notifier.startScan,
                       child: Text(state.scanning ? 'Stop' : 'Start'),
                     ),
                     ElevatedButton(
-                      onPressed: advState.advertising ? advNotifier.stop : advNotifier.start,
-                      child: Text(advState.advertising ? 'Adv Stop' : 'Adv Start'),
+                      onPressed:
+                          advState.advertising
+                              ? advNotifier.stop
+                              : advNotifier.start,
+                      child: Text(
+                        advState.advertising ? 'Adv Stop' : 'Adv Start',
+                      ),
                     ),
                   ],
                 ),
@@ -98,10 +114,7 @@ class BleScanScreen extends ConsumerWidget {
                 const Text('RSSI >= '),
                 SizedBox(
                   width: 56,
-                  child: Text(
-                    '${threshold}dBm',
-                    textAlign: TextAlign.right,
-                  ),
+                  child: Text('${threshold}dBm', textAlign: TextAlign.right),
                 ),
               ],
             ),
@@ -112,8 +125,8 @@ class BleScanScreen extends ConsumerWidget {
             max: 0,
             divisions: 100,
             label: '$threshold dBm',
-            onChanged: (v) =>
-                ref.read(rssiThresholdProvider.notifier).set(v.round()),
+            onChanged:
+                (v) => ref.read(rssiThresholdProvider.notifier).set(v.round()),
           ),
           const Divider(height: 1),
           Expanded(
@@ -125,9 +138,10 @@ class BleScanScreen extends ConsumerWidget {
                 final ad = r.advertisementData;
                 final isCc = ad.advName.startsWith('CC-');
                 final svcCount = ad.serviceUuids.length;
-                final title = ad.advName.isNotEmpty
-                    ? ad.advName
-                    : device.platformName.isNotEmpty
+                final title =
+                    ad.advName.isNotEmpty
+                        ? ad.advName
+                        : device.platformName.isNotEmpty
                         ? device.platformName
                         : device.remoteId.str;
                 return ListTile(
@@ -137,13 +151,19 @@ class BleScanScreen extends ConsumerWidget {
                       Expanded(child: Text(title)),
                       if (isCc)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           margin: const EdgeInsets.only(left: 6),
                           decoration: BoxDecoration(
                             color: Colors.blue.shade50,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Text('CC', style: TextStyle(color: Colors.blue, fontSize: 12)),
+                          child: const Text(
+                            'CC',
+                            style: TextStyle(color: Colors.blue, fontSize: 12),
+                          ),
                         ),
                     ],
                   ),
