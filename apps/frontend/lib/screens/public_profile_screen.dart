@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/user.dart';
 import 'package:frontend/providers/public_profile_provider.dart';
+import 'package:frontend/shared/app_theme.dart';
 
 class PublicProfileScreen extends ConsumerWidget {
   const PublicProfileScreen({super.key, required this.userId, this.initialUser});
@@ -79,19 +80,24 @@ Widget _snsIcon(String key) {
 
 Widget buildPublicProfileContent(BuildContext context, User user,
     {Widget? headerAction}) {
-  final snsEntries = user.snsLinks?.entries
-          .where((entry) => entry.value.trim().isNotEmpty)
-          .toList() ??
-      const [];
+  final snsEntries =
+      user.snsLinks?.entries.where((entry) => entry.value.trim().isNotEmpty).toList() ??
+          const [];
   final faculty = user.faculty ?? '学部未設定';
   final gradeLabel = _gradeLabel(user.grade);
   final genderLabel = user.gender ?? '未設定';
 
   return ListView(
-    padding: const EdgeInsets.all(16),
     physics: const AlwaysScrollableScrollPhysics(),
+    padding: EdgeInsets.zero,
     children: [
-        Row(
+      Container(
+        decoration: BoxDecoration(
+          gradient: headerGradient,
+          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
@@ -102,62 +108,81 @@ Widget buildPublicProfileContent(BuildContext context, User user,
                       : null,
               child: (user.profilePhotoUrl == null ||
                       user.profilePhotoUrl!.isEmpty)
-                  ? const Icon(Icons.person, size: 48)
+                  ? const Icon(Icons.person, size: 48, color: Colors.white)
                   : null,
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 20),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     user.username,
-                    style: Theme.of(context).textTheme.headlineSmall,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     '$faculty • $gradeLabel • $genderLabel',
                     style: Theme.of(context)
                         .textTheme
                         .bodyMedium
-                        ?.copyWith(color: Colors.grey[700]),
+                        ?.copyWith(color: Colors.white70),
                   ),
                 ],
               ),
             ),
           ],
         ),
-        if (headerAction != null) ...[
-          const SizedBox(height: 16),
-          headerAction,
-        ],
-        const SizedBox(height: 24),
-        if (user.bio != null && user.bio!.trim().isNotEmpty) ...[
-          Text('自己紹介', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(
-            user.bio!,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 24),
-        ],
-        if (snsEntries.isNotEmpty) ...[
-          Text('SNS', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ...snsEntries.map((entry) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: _snsIcon(entry.key),
-                title: Text(entry.key.toUpperCase()),
-                subtitle: Text(entry.value),
-              )),
-          const SizedBox(height: 24),
-        ],
-        Text('最近のアクティビティ', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        const Text(
-          'すれ違いや友達機能は今後さらに充実予定です。',
-          style: TextStyle(color: Colors.grey),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (headerAction != null) ...[
+              headerAction,
+              const SizedBox(height: 20),
+            ],
+            if (user.bio != null && user.bio!.trim().isNotEmpty) ...[
+              Text('自己紹介', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(
+                user.bio!,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 24),
+            ],
+            if (snsEntries.isNotEmpty) ...[
+              Text('SNS', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              ...snsEntries.map(
+                (entry) => Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: ListTile(
+                    leading: _snsIcon(entry.key),
+                    title: Text(entry.key.toUpperCase()),
+                    subtitle: Text(entry.value),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+            Text('最近のアクティビティ',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              'すれ違いや友達機能は今後さらに充実予定です。',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
         ),
-      ],
+      ),
+    ],
   );
 }

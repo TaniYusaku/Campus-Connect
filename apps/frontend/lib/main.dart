@@ -6,6 +6,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/register_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'shared/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ← Firebase前に必要
@@ -37,10 +38,8 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'Campus Connect',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       home: getHome(),
     );
   }

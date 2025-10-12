@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:frontend/models/user.dart';
 import 'package:frontend/providers/api_provider.dart';
 import 'package:frontend/providers/ble_advertise_provider.dart';
@@ -9,6 +10,7 @@ import 'package:frontend/providers/like_provider.dart';
 import 'package:frontend/providers/liked_history_provider.dart';
 import 'package:frontend/screens/public_profile_screen.dart';
 import 'package:frontend/screens/tab_screens/friends_list_screen.dart';
+import 'package:frontend/shared/app_theme.dart';
 
 class EncounterScreen extends ConsumerStatefulWidget {
   const EncounterScreen({super.key});
@@ -17,8 +19,15 @@ class EncounterScreen extends ConsumerStatefulWidget {
   ConsumerState<EncounterScreen> createState() => _EncounterScreenState();
 }
 
-class _EncounterScreenState extends ConsumerState<EncounterScreen> {
+class _EncounterScreenState extends ConsumerState<EncounterScreen>
+    with TickerProviderStateMixin {
   bool _toggling = false;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
+  bool _pulseActive = false;
+  late final TabController _tabController;
+  final FlutterSecureStorage _uiStorage = const FlutterSecureStorage();
+  static const String _tabStorageKey = 'ui_encounter_tab_index';
 
   Future<void> _toggleScanAndAdvertise(bool running) async {
     if (_toggling) return;
@@ -62,12 +71,54 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _pulseAnimation = Tween<double>(begin: 0.92, end: 1.08).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabChange);
+    _restoreTabIndex();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _tabController.removeListener(_handleTabChange);
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _handleTabChange() {
+    if (_tabController.indexIsChanging) return;
+    _uiStorage.write(key: _tabStorageKey, value: _tabController.index.toString());
+  }
+
+  Future<void> _restoreTabIndex() async {
+    final stored = await _uiStorage.read(key: _tabStorageKey);
+    final index = int.tryParse(stored ?? '0');
+    if (!mounted) return;
+    if (index != null && index >= 0 && index < _tabController.length) {
+      _tabController.index = index;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final encounterAsync = ref.watch(encounterListProvider);
     final likedHistory = ref.watch(likedHistoryProvider);
     final likedSet = ref.watch(likedSetProvider);
     final scanState = ref.watch(bleScanProvider);
     final advState = ref.watch(bleAdvertiseProvider);
+    final friendIds = ref.watch(friendsFutureProvider).maybeWhen(
+      data: (friends) => friends.map((u) => u.id).toSet(),
+      orElse: () => <String>{},
+    ) ??
+    <String>{};
 
     final running = scanState.scanning || advState.advertising;
     final buttonLabel = running ? 'スキャン・広告を停止' : 'すれ違いスキャンを開始';
@@ -75,6 +126,15 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
     final statusText =
         'スキャン: ${scanState.scanning ? '稼働中' : '停止中'} / '
         '広告: ${advState.advertising ? '稼働中 (${advState.localName.isNotEmpty ? advState.localName : 'ID未登録'})' : '停止中'}';
+
+    if (running && !_pulseActive) {
+      _pulseController.repeat(reverse: true);
+      _pulseActive = true;
+    } else if (!running && _pulseActive) {
+      _pulseController.stop();
+      _pulseController.reset();
+      _pulseActive = false;
+    }
 
     final refreshEncounters = () async {
       await ref.refresh(encounterListProvider.future);
@@ -101,7 +161,8 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
         ),
         data: (users) {
           final filtered = users
-              .where((user) => !likedSet.contains(user.id))
+              .where((user) =>
+                  !likedSet.contains(user.id) && !friendIds.contains(user.id))
               .toList();
           if (filtered.isEmpty) {
             return RefreshIndicator(
@@ -119,35 +180,61 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
             onRefresh: refreshEncounters,
             child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
               itemCount: filtered.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final user = filtered[index];
                 final isLiked = likedSet.contains(user.id);
-                return ListTile(
-                  leading: const Icon(Icons.person),
-                  title: Text(user.username),
-                  subtitle: Text('${user.faculty} ${user.grade}年'),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => PublicProfileScreen(
-                          userId: user.id,
-                          initialUser: user,
+                return Card(
+                  child: ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.paleGold,
+                      child: Text(
+                        user.username.characters.first,
+                        style: const TextStyle(
+                          color: AppColors.primaryNavy,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    );
-                  },
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: isLiked ? 'いいねを取り消す' : 'いいね',
-                        icon: Icon(
-                          isLiked ? Icons.favorite : Icons.favorite_border,
-                          color: isLiked ? Colors.pink : null,
+                    ),
+                    title: Text(user.username),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            _InfoChip(label: user.faculty ?? '学部未設定'),
+                            _InfoChip(label: '${user.grade}年'),
+                          ],
                         ),
-                        onPressed: () async {
+                      ],
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => PublicProfileScreen(
+                            userId: user.id,
+                            initialUser: user,
+                          ),
+                        ),
+                      );
+                    },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: isLiked ? 'いいねを取り消す' : 'いいね',
+                          icon: Icon(
+                            isLiked ? Icons.favorite : Icons.favorite_border,
+                            color: isLiked ? Colors.pink : null,
+                          ),
+                          onPressed: () async {
                           final api = ref.read(apiServiceProvider);
                           if (!isLiked) {
                             final res = await api.likeUser(user.id);
@@ -164,16 +251,35 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
                               ),
                             );
                             if (res.ok) {
-                              ref
-                                  .read(likedSetProvider.notifier)
-                                  .markLiked(user.id);
-                              await ref
-                                  .read(likedHistoryProvider.notifier)
-                                  .addFromUser(user);
+                              ref.invalidate(encounterListProvider);
                               if (res.matchCreated) {
                                 ref.invalidate(friendsFutureProvider);
+                                ref
+                                    .read(likedSetProvider.notifier)
+                                    .unmark(user.id);
+                                await ref
+                                    .read(likedHistoryProvider.notifier)
+                                    .removeByUserId(user.id);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '友達になりました！${user.username}を友達タブで確認できます',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } else {
+                                ref
+                                    .read(likedSetProvider.notifier)
+                                    .markLiked(user.id);
+                                await ref
+                                    .read(likedHistoryProvider.notifier)
+                                    .addFromUser(user);
+                                if (mounted) {
+                                  _tabController.animateTo(1);
+                                }
                               }
-                              DefaultTabController.of(context)?.animateTo(1);
                             }
                           } else {
                             final ok = await api.unlikeUser(user.id);
@@ -202,10 +308,10 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
                           }
                         },
                       ),
-                      IconButton(
-                        tooltip: 'ブロック',
-                        icon: const Icon(Icons.block),
-                        onPressed: () async {
+                        IconButton(
+                          tooltip: 'ブロック',
+                          icon: const Icon(Icons.block),
+                          onPressed: () async {
                           final confirmed = await showDialog<bool>(
                             context: context,
                             builder: (ctx) => AlertDialog(
@@ -242,7 +348,8 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
                           }
                         },
                       ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
@@ -253,7 +360,10 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
     }
 
     Widget buildLikedTab() {
-      if (likedHistory.isEmpty) {
+      final filteredLikes = likedHistory
+          .where((entry) => !friendIds.contains(entry.userId))
+          .toList();
+      if (filteredLikes.isEmpty) {
         return RefreshIndicator(
           onRefresh: refreshLikes,
           child: ListView(
@@ -269,10 +379,11 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
         onRefresh: refreshLikes,
         child: ListView.separated(
           physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: likedHistory.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          itemCount: filteredLikes.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
-            final entry = likedHistory[index];
+            final entry = filteredLikes[index];
             final placeholderUser = User(
               id: entry.userId,
               username: entry.username,
@@ -284,31 +395,47 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
               snsLinks: null,
               gender: null,
             );
-            return ListTile(
-              leading: const Icon(Icons.favorite, color: Colors.pink),
-              title: Text(entry.username),
-              subtitle: Text(
-                '${entry.faculty ?? '学部未設定'} ${entry.grade ?? '-'}年',
-              ),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PublicProfileScreen(
-                      userId: entry.userId,
-                      initialUser: placeholderUser,
+            return Card(
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.accentCrimson.withOpacity(0.12),
+                  child: const Icon(Icons.favorite, color: AppColors.accentCrimson),
+                ),
+                title: Text(entry.username),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text(
+                      '${entry.faculty ?? '学部未設定'} ${entry.grade ?? '-'}年',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: AppColors.textSecondary),
                     ),
-                  ),
-                );
-              },
-              trailing: IconButton(
-                tooltip: 'いいねを取り消す',
-                icon: const Icon(Icons.favorite, color: Colors.pink),
-                onPressed: () async {
-                  final api = ref.read(apiServiceProvider);
-                  final ok = await api.unlikeUser(entry.userId);
-                  if (!context.mounted) return;
-                  if (ok) {
-                    ref.read(likedSetProvider.notifier).unmark(entry.userId);
+                  ],
+                ),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PublicProfileScreen(
+                        userId: entry.userId,
+                        initialUser: placeholderUser,
+                      ),
+                    ),
+                  );
+                },
+                trailing: IconButton(
+                  tooltip: 'いいねを取り消す',
+                  icon: const Icon(Icons.cancel, color: AppColors.accentCrimson),
+                  onPressed: () async {
+                    final api = ref.read(apiServiceProvider);
+                    final ok = await api.unlikeUser(entry.userId);
+                    if (!context.mounted) return;
+                    if (ok) {
+                      ref.read(likedSetProvider.notifier).unmark(entry.userId);
                     await ref
                         .read(likedHistoryProvider.notifier)
                         .removeByUserId(entry.userId);
@@ -320,8 +447,9 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('取り消せませんでした')),
                     );
-                  }
-                },
+                    }
+                  },
+                ),
               ),
             );
           },
@@ -329,60 +457,161 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen> {
       );
     }
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    FilledButton.icon(
-                      onPressed:
-                          _toggling ? null : () => _toggleScanAndAdvertise(running),
-                      icon: Icon(buttonIcon),
-                      label: Text(_toggling ? '処理中...' : buttonLabel),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      statusText,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    if (advState.error != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '広告エラー: ${advState.error}',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: Colors.redAccent),
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: headerGradient,
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 12,
+                        offset: Offset(0, 6),
                       ),
                     ],
-                  ],
+                  ),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          _ScanPulseIndicator(
+                            running: running,
+                            animation: _pulseAnimation,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  running ? 'スキャンモード稼働中' : '待機中',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  statusText,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed:
+                            _toggling ? null : () => _toggleScanAndAdvertise(running),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppColors.primaryNavy,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        icon: Icon(buttonIcon),
+                        label: Text(_toggling ? '処理中...' : buttonLabel),
+                      ),
+                      const SizedBox(height: 12),
+                      if (advState.error != null)
+                        Text(
+                          '広告エラー: ${advState.error}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: Colors.red[100]),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-              const TabBar(
-                tabs: [
-                  Tab(text: 'すれ違い'),
-                  Tab(text: 'いいね'),
+            TabBar(
+              controller: _tabController,
+              tabs: const [
+                Tab(text: 'すれ違い'),
+                Tab(text: 'いいね'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  buildEncounterTab(),
+                  buildLikedTab(),
                 ],
               ),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    buildEncounterTab(),
-                    buildLikedTab(),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      label: Text(label),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+    );
+  }
+}
+
+class _ScanPulseIndicator extends StatelessWidget {
+  const _ScanPulseIndicator({required this.running, required this.animation});
+
+  final bool running;
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    final circle = Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: running
+            ? AppColors.softGold.withOpacity(0.2)
+            : Colors.white.withOpacity(0.18),
+        border: Border.all(color: Colors.white, width: 2),
+      ),
+      child: Icon(
+        running ? Icons.wifi_tethering : Icons.bluetooth_searching,
+        color: Colors.white,
+        size: 28,
+      ),
+    );
+
+    if (!running) {
+      return circle;
+    }
+
+    return ScaleTransition(
+      scale: animation,
+      child: circle,
     );
   }
 }

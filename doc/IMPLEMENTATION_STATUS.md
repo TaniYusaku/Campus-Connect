@@ -17,7 +17,6 @@ This document summarizes the current implementation versus the documented requir
 - GET `/api/users/blocked`
 - GET `/api/users/likes/recent`
 - GET `/api/users/:userId`（公開プロフィール取得）
-  - 友達でない閲覧者には `snsLinks` を除外
 
 ### 要件との差分 / 未対応項目
 - PUT `/users/me/device`（通知用デバイストークン登録）
@@ -43,6 +42,7 @@ This document summarizes the current implementation versus the documented requir
 
 ## Security / Operational Notes
 - Firebaseサービスアカウント鍵は `.gitignore` 対象。コミットしない運用を継続し、必要に応じ `.env` や秘密管理ストアに保存する。
+- **補足**: ローカル環境には `apps/backend/serviceAccountKey.json` を配置しているが、`.gitignore` に含めてあり Git 管理からは除外済み。リポジトリにコミット・push はされていない。
 - `FIREBASE_WEB_API_KEY` などの環境変数は `.env` などでローカル管理する。
 
 ## メモ
