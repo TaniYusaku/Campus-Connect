@@ -107,6 +107,97 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
     }
   }
 
+  Future<void> _showMatchCelebration(User user) async {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 30, 24, 24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.softGold,
+                AppColors.primaryNavy.withOpacity(0.92),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryNavy.withOpacity(0.25),
+                blurRadius: 26,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.7, end: 1.0),
+                duration: const Duration(milliseconds: 420),
+                curve: Curves.elasticOut,
+                builder: (context, value, child) => Transform.scale(
+                  scale: value,
+                  child: child,
+                ),
+                child: const Icon(
+                  Icons.celebration,
+                  size: 64,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                '友達になりました！',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${user.username} さんと再会したらメッセージを送ってみましょう。',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withOpacity(0.9),
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const FriendsListScreen(),
+                    ),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.primaryNavy,
+                ),
+                child: const Text('友達リストを開く'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('閉じる'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final encounterAsync = ref.watch(encounterListProvider);
@@ -239,62 +330,44 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                           if (!isLiked) {
                             final res = await api.likeUser(user.id);
                             if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  res.ok
-                                      ? (res.matchCreated
-                                          ? 'いいねしました（友達になりました）'
-                                          : 'いいねしました')
-                                      : 'いいねに失敗しました',
-                                ),
-                              ),
-                            );
-                            if (res.ok) {
-                              ref.invalidate(encounterListProvider);
-                              if (res.matchCreated) {
-                                ref.invalidate(friendsFutureProvider);
-                                ref
-                                    .read(likedSetProvider.notifier)
-                                    .unmark(user.id);
-                                await ref
-                                    .read(likedHistoryProvider.notifier)
-                                    .removeByUserId(user.id);
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        '友達になりました！${user.username}を友達タブで確認できます',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              } else {
-                                ref
-                                    .read(likedSetProvider.notifier)
-                                    .markLiked(user.id);
-                                await ref
-                                    .read(likedHistoryProvider.notifier)
-                                    .addFromUser(user);
-                                if (mounted) {
-                                  _tabController.animateTo(1);
-                                }
+                            if (!res.ok) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('いいねに失敗しました')),
+                              );
+                              return;
+                            }
+                            ref.invalidate(encounterListProvider);
+                            if (res.matchCreated) {
+                              ref.invalidate(friendsFutureProvider);
+                              ref.read(likedSetProvider.notifier).unmark(user.id);
+                              await ref
+                                  .read(likedHistoryProvider.notifier)
+                                  .removeByUserId(user.id);
+                              if (mounted) {
+                                await _showMatchCelebration(user);
+                              }
+                            } else {
+                              ref.read(likedSetProvider.notifier).markLiked(user.id);
+                              await ref
+                                  .read(likedHistoryProvider.notifier)
+                                  .addFromUser(user);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('いいねしました')),
+                                );
+                                _tabController.animateTo(1);
                               }
                             }
                           } else {
                             final ok = await api.unlikeUser(user.id);
                             if (!context.mounted) return;
                             if (ok) {
-                              ref
-                                  .read(likedSetProvider.notifier)
-                                  .unmark(user.id);
+                              ref.read(likedSetProvider.notifier).unmark(user.id);
                               await ref
                                   .read(likedHistoryProvider.notifier)
                                   .removeByUserId(user.id);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('いいねを取り消しました'),
-                                ),
+                                const SnackBar(content: Text('いいねを取り消しました')),
                               );
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(

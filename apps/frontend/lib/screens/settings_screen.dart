@@ -5,6 +5,7 @@ import 'package:frontend/providers/auth_provider.dart';
 import 'package:frontend/providers/notification_preferences_provider.dart';
 import 'package:frontend/screens/blocked_users_screen.dart';
 import 'package:frontend/screens/profile_edit_screen.dart';
+import 'package:frontend/screens/onboarding_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -85,6 +86,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Future<void> _showTutorial() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const OnboardingScreen(returnToCaller: true),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final notificationsEnabled = ref.watch(notificationPreferenceProvider);
@@ -129,6 +138,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading: const Icon(Icons.privacy_tip_outlined),
             title: const Text('プライバシーポリシー'),
             onTap: _processing ? null : () => _showTerms('プライバシーポリシー'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.school_outlined),
+            title: const Text('チュートリアルをもう一度見る'),
+            subtitle: const Text('オンボーディングを再確認'),
+            onTap: _processing ? null : _showTutorial,
           ),
           const Divider(height: 32),
           const _SectionHeader(label: 'その他'),
