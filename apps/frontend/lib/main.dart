@@ -7,6 +7,7 @@ import 'screens/home_screen.dart';
 import 'screens/register_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'shared/app_theme.dart';
+import 'widgets/in_app_notification_host.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ← Firebase前に必要
@@ -78,6 +79,8 @@ class _HomeGateState extends State<_HomeGate> {
 
   @override
   Widget build(BuildContext context) {
-    return const HomeScreen();
+    return const InAppNotificationHost(
+      child: HomeScreen(),
+    );
   }
 }

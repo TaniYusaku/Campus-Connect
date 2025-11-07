@@ -7,6 +7,7 @@ import serviceAccount from '../serviceAccountKey.json' assert { type: 'json' }
 import { authRouter } from './presentation/routers/auth.router'
 import { userRouter } from './presentation/routers/user.router'
 import { encounterRouter } from './presentation/routers/encounter.router'
+import { announcementRouter } from './presentation/routers/announcement.router'
 import { startRecentEncountersCleanup } from './jobs/cleanup_recent_encounters'
 import { startTempIdsCleanup } from './jobs/cleanup_temp_ids'
 
@@ -47,6 +48,7 @@ app.get('/test', (c) => {
 app.route('/auth', authRouter);
 app.route('/users', userRouter);
 app.route('/encounters', encounterRouter);
+app.route('/announcements', announcementRouter);
 
 const port = 3000
 console.log(`Server is running on http://0.0.0.0:${port}`)

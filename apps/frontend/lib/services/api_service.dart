@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:frontend/models/user.dart';
+import 'package:frontend/models/announcement.dart';
 import 'dart:async';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -22,7 +23,7 @@ class ApiService {
     'API_BASE_URL',
     
     //192.168.111.145
-    defaultValue: 'http://192.168.0.88:3000/api',
+    defaultValue: 'http://192.168.111.123:3000/api',
   );
 
   // Concurrency guard for refresh
@@ -293,6 +294,7 @@ class ApiService {
     Map<String, String>? snsLinks,
     String? profilePhotoUrl,
     String? gender,
+    bool? sameGenderOnly,
   }) async {
     final Map<String, dynamic> payload = {};
     if (userName != null) payload['userName'] = userName;
@@ -302,6 +304,7 @@ class ApiService {
     if (snsLinks != null) payload['snsLinks'] = snsLinks;
     if (profilePhotoUrl != null) payload['profilePhotoUrl'] = profilePhotoUrl;
     if (gender != null) payload['gender'] = gender;
+    if (sameGenderOnly != null) payload['sameGenderOnly'] = sameGenderOnly;
 
     final response = await _authorizedRequest((token) {
       return http.put(
@@ -318,6 +321,25 @@ class ApiService {
       return User.fromJson(body);
     }
     return null;
+  }
+
+  Future<List<Announcement>> getAnnouncements() async {
+    final response = await _authorizedRequest((token) {
+      return http.get(
+        Uri.parse('$_baseUrl/announcements'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    });
+    if (response == null || response.statusCode != 200) {
+      return [];
+    }
+    final body = jsonDecode(response.body) as List<dynamic>;
+    return body
+        .map((e) => Announcement.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   // --- Social actions ---

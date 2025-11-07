@@ -29,6 +29,7 @@ const updateUserSchema = z.object({
   faculty: z.string().optional(),
   grade: z.number().optional(),
   gender: z.enum(['男性', '女性', 'その他／回答しない']).optional(),
+  sameGenderOnly: z.boolean().optional(),
   profilePhotoUrl: z.string().url().optional(),
   bio: z.string().optional(),
   hobbies: z.array(z.string()).optional(),
@@ -138,10 +139,40 @@ userRouter.get('/encounters', async (c) => {
   const userId = c.get('user').uid;
   // ブロックしているユーザーIDのリストを取得
   const blockedUserIds = await blockRepository.findAllIds(userId);
+  const viewer = await userRepository.findById(userId);
+  const friendIds = await matchRepository.findAll(userId);
   // すれ違ったユーザー一覧を取得
   const users = await encounterRepository.findRecentEncounteredUsers(userId);
+  const sameGenderOnly = viewer?.sameGenderOnly === true;
+  const viewerGender = viewer?.gender;
   // ブロック済みユーザーを除外
-  const safeUsers = users.filter(user => !blockedUserIds.includes(user.id)).map(({ email, ...rest }) => rest);
+  const genderFiltered = sameGenderOnly && viewerGender
+    ? users.filter((user) => {
+        if (!user.gender) return false;
+        return user.gender === viewerGender;
+      })
+    : users;
+  const safeUsers = genderFiltered
+    .filter(user => !blockedUserIds.includes(user.id))
+    .map((user) => {
+      const {
+        email,
+        lastEncounteredAt,
+        encounterCount,
+        ...rest
+      } = user as typeof user & {
+        lastEncounteredAt?: Date;
+        encounterCount?: number;
+      };
+      return {
+        ...rest,
+        lastEncounteredAt: lastEncounteredAt instanceof Date
+          ? lastEncounteredAt.toISOString()
+          : lastEncounteredAt ?? null,
+        encounterCount: typeof encounterCount === 'number' ? encounterCount : 1,
+        isFriend: friendIds.includes(user.id),
+      };
+    });
   return c.json(safeUsers);
 });
 

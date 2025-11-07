@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -6,8 +8,11 @@ import 'package:frontend/providers/api_provider.dart';
 import 'package:frontend/providers/ble_advertise_provider.dart';
 import 'package:frontend/providers/ble_provider.dart';
 import 'package:frontend/providers/encounter_provider.dart';
+import 'package:frontend/providers/in_app_notification_provider.dart';
 import 'package:frontend/providers/like_provider.dart';
 import 'package:frontend/providers/liked_history_provider.dart';
+import 'package:frontend/providers/notification_preferences_provider.dart';
+import 'package:frontend/providers/recent_match_provider.dart';
 import 'package:frontend/screens/public_profile_screen.dart';
 import 'package:frontend/screens/tab_screens/friends_list_screen.dart';
 import 'package:frontend/shared/app_theme.dart';
@@ -28,6 +33,11 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
   late final TabController _tabController;
   final FlutterSecureStorage _uiStorage = const FlutterSecureStorage();
   static const String _tabStorageKey = 'ui_encounter_tab_index';
+  final Map<String, DateTime?> _lastEncounteredAtMap = {};
+  final Map<String, int> _encounterCountMap = {};
+  final Map<String, bool> _isFriendMap = {};
+  Timer? _autoRefreshTimer;
+  bool _encounterBaselineReady = false;
 
   Future<void> _toggleScanAndAdvertise(bool running) async {
     if (_toggling) return;
@@ -83,6 +93,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChange);
     _restoreTabIndex();
+    _startAutoRefresh();
   }
 
   @override
@@ -90,12 +101,22 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
     _pulseController.dispose();
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
+    _autoRefreshTimer?.cancel();
     super.dispose();
   }
 
   void _handleTabChange() {
     if (_tabController.indexIsChanging) return;
     _uiStorage.write(key: _tabStorageKey, value: _tabController.index.toString());
+  }
+
+  void _startAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      ref.invalidate(encounterListProvider);
+      ref.invalidate(friendsFutureProvider);
+    });
   }
 
   Future<void> _restoreTabIndex() async {
@@ -105,6 +126,57 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
     if (index != null && index >= 0 && index < _tabController.length) {
       _tabController.index = index;
     }
+  }
+
+  void _handleEncounterNotifications(List<User> users) {
+    final notificationsEnabled = ref.read(notificationPreferenceProvider);
+    final notifier = notificationsEnabled
+        ? ref.read(inAppNotificationProvider.notifier)
+        : null;
+
+    final currentIds = <String>{};
+    for (final user in users) {
+      currentIds.add(user.id);
+      final latest = user.lastEncounteredAt;
+      final previous = _lastEncounteredAtMap[user.id];
+      final hasNewEncounter =
+          latest != null && (previous == null || latest.isAfter(previous));
+      final currentCount = user.encounterCount;
+      final previousCount = _encounterCountMap[user.id] ?? 0;
+
+      final wasFriend = _isFriendMap[user.id] ?? false;
+      final isFriendNow = user.isFriend;
+      final becameFriend = isFriendNow && !wasFriend;
+
+      if (notificationsEnabled && hasNewEncounter) {
+        if (currentCount >= 2 && previousCount < currentCount) {
+          notifier?.show(
+            title: '${user.username}さんと${currentCount}回すれ違っています',
+            message: 'よく会う相手には思い切っていいねしてみましょう。',
+            category: NotificationCategory.repeatEncounter,
+          );
+        }
+        if (isFriendNow) {
+          notifier?.show(
+            title: '友達の${user.username}さんと再会！',
+            message: 'アプリで繋がりを確認して声をかけてみましょう。',
+            category: NotificationCategory.friendEncounter,
+          );
+        }
+      }
+
+      if (becameFriend) {
+        ref.invalidate(friendsFutureProvider);
+      }
+
+      _lastEncounteredAtMap[user.id] = latest ?? previous;
+      _encounterCountMap[user.id] = currentCount;
+      _isFriendMap[user.id] = isFriendNow;
+    }
+
+    _lastEncounteredAtMap.removeWhere((key, _) => !currentIds.contains(key));
+    _encounterCountMap.removeWhere((key, _) => !currentIds.contains(key));
+    _isFriendMap.removeWhere((key, _) => !currentIds.contains(key));
   }
 
   Future<void> _showMatchCelebration(User user) async {
@@ -200,6 +272,23 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<List<User>>>(
+      encounterListProvider,
+      (previous, next) {
+        if (!next.hasValue) return;
+        final users = next.value ?? [];
+        if (!_encounterBaselineReady) {
+          for (final user in users) {
+            _lastEncounteredAtMap[user.id] = user.lastEncounteredAt;
+            _encounterCountMap[user.id] = user.encounterCount;
+            _isFriendMap[user.id] = user.isFriend;
+          }
+          _encounterBaselineReady = true;
+          return;
+        }
+        _handleEncounterNotifications(users);
+      },
+    );
     final encounterAsync = ref.watch(encounterListProvider);
     final likedHistory = ref.watch(likedHistoryProvider);
     final likedSet = ref.watch(likedSetProvider);
@@ -216,7 +305,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
     final buttonIcon = running ? Icons.stop : Icons.play_arrow;
     final statusText =
         'スキャン: ${scanState.scanning ? '稼働中' : '停止中'} / '
-        '広告: ${advState.advertising ? '稼働中 (${advState.localName.isNotEmpty ? advState.localName : 'ID未登録'})' : '停止中'}';
+        'アドバタイズ: ${advState.advertising ? '稼働中 (${advState.localName.isNotEmpty ? advState.localName : 'ID未登録'})' : '停止中'}';
 
     if (running && !_pulseActive) {
       _pulseController.repeat(reverse: true);
@@ -338,11 +427,14 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                             }
                             ref.invalidate(encounterListProvider);
                             if (res.matchCreated) {
-                              ref.invalidate(friendsFutureProvider);
-                              ref.read(likedSetProvider.notifier).unmark(user.id);
-                              await ref
-                                  .read(likedHistoryProvider.notifier)
-                                  .removeByUserId(user.id);
+                            ref.invalidate(friendsFutureProvider);
+                            ref.read(likedSetProvider.notifier).unmark(user.id);
+                            await ref
+                                .read(likedHistoryProvider.notifier)
+                                .removeByUserId(user.id);
+                              ref
+                                  .read(recentlyCelebratedMatchesProvider.notifier)
+                                  .update((state) => {...state, user.id});
                               if (mounted) {
                                 await _showMatchCelebration(user);
                               }

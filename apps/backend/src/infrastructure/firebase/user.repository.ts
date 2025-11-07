@@ -26,6 +26,7 @@ export class UserRepository implements IUserRepository {
       faculty: authInfo.faculty,
       grade: authInfo.grade,
       gender: authInfo.gender,
+      sameGenderOnly: false,
     };
 
     await db.collection('users').doc(userRecord.uid).set(newUser);

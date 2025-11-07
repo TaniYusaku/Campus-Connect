@@ -21,6 +21,7 @@ export type UpdatableUserInfo = {
   faculty?: string;
   grade?: number;
   gender?: string;
+  sameGenderOnly?: boolean;
   profilePhotoUrl?: string;
   bio?: string;
   hobbies?: string[];

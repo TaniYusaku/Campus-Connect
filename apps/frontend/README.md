@@ -34,6 +34,6 @@ BLE (v0) implemented
 
 Next Steps
 - Enforce 24h TTL cleanup for `recentEncounters` on server (TTL policy or scheduled job).
-- Implement push notifications on match creation.
+- Implement in-app notifications when a match is detected again.
 - Wire Friends/Profile screens and add like/block UI.
-- Consider background scan/advertise in later phases (OS constraints apply).
+- Focus on polishing foreground scan/advertise UX (background動作はサポート対象外)。

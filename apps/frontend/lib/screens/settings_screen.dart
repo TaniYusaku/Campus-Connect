@@ -6,6 +6,7 @@ import 'package:frontend/providers/notification_preferences_provider.dart';
 import 'package:frontend/screens/blocked_users_screen.dart';
 import 'package:frontend/screens/profile_edit_screen.dart';
 import 'package:frontend/screens/onboarding_screen.dart';
+import 'package:frontend/screens/announcements_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -113,7 +114,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SwitchListTile(
             secondary: const Icon(Icons.notifications_outlined),
             title: const Text('通知を受け取る'),
-            subtitle: const Text('再会通知などのプッシュ通知設定（将来対応予定）'),
+            subtitle: const Text('アプリ内通知のオン/オフを切り替え'),
             value: notificationsEnabled,
             onChanged: _processing
                 ? null
@@ -138,6 +139,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading: const Icon(Icons.privacy_tip_outlined),
             title: const Text('プライバシーポリシー'),
             onTap: _processing ? null : () => _showTerms('プライバシーポリシー'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.campaign_outlined),
+            title: const Text('運営からのお知らせ'),
+            onTap: _processing
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AnnouncementsScreen(),
+                      ),
+                    );
+                  },
           ),
           ListTile(
             leading: const Icon(Icons.school_outlined),

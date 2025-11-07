@@ -24,6 +24,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   bool _initialized = false;
   bool _saving = false;
   bool _uploading = false;
+  bool _sameGenderOnly = false;
 
   // Options moved to shared/profile_constants.dart
 
@@ -127,6 +128,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         (u.gender != null && kGenderOptions.contains(u.gender))
             ? u.gender
             : '未設定';
+    _sameGenderOnly = u.sameGenderOnly;
     _initialized = true;
   }
 
@@ -146,6 +148,15 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       else
         gradeInt = int.tryParse(_selectedGradeStr!);
     }
+    final gender =
+        (_selectedGender == null || _selectedGender == '未設定')
+            ? null
+            : _selectedGender;
+    final sameGenderOnly =
+        (_selectedGender == null || _selectedGender == '未設定')
+            ? false
+            : _sameGenderOnly;
+
     final updated = await api.updateMe(
       userName: _nameCtl.text.trim(),
       faculty: _selectedFaculty == '未設定' ? null : _selectedFaculty,
@@ -153,9 +164,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       bio: _bioCtl.text.trim(),
       snsLinks: sns.isEmpty ? null : sns,
       gender:
-          (_selectedGender == null || _selectedGender == '未設定')
-              ? null
-              : _selectedGender,
+          gender,
+      sameGenderOnly: sameGenderOnly,
     );
     setState(() => _saving = false);
     if (!mounted) return;
@@ -202,6 +212,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             );
           }
           _initFields(user);
+          final genderSelectable =
+              _selectedGender != null && _selectedGender != '未設定';
           // Pull-to-refresh to reload latest profile
           return RefreshIndicator(
             onRefresh: () async {
@@ -320,6 +332,18 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                                     : null,
                         autovalidateMode: AutovalidateMode.onUserInteraction,
                         decoration: const InputDecoration(labelText: '性別 (必須)'),
+                      ),
+                      SwitchListTile.adaptive(
+                        title: const Text('同性の友達を探す'),
+                        subtitle: Text(
+                          genderSelectable
+                              ? 'ON にすると、すれ違い一覧に同じ性別のユーザーのみ表示されます。'
+                              : '性別を設定すると利用できます。',
+                        ),
+                        value: _sameGenderOnly,
+                        onChanged: genderSelectable
+                            ? (value) => setState(() => _sameGenderOnly = value)
+                            : null,
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(

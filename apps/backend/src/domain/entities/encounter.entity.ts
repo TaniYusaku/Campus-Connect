@@ -1,3 +1,5 @@
+import type { User } from './user.entity';
+
 export type Encounter = {
   id: string; // FirestoreのドキュメントID
   userId: string; // すれ違った側のユーザーID
@@ -7,4 +9,10 @@ export type Encounter = {
 
 export type RecentEncounter = {
   lastEncounteredAt: Date;
-}; 
+  count?: number;
+};
+
+export type EncounteredUser = User & {
+  lastEncounteredAt?: Date;
+  encounterCount?: number;
+};

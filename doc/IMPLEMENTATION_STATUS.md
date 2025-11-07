@@ -17,9 +17,9 @@ This document summarizes the current implementation versus the documented requir
 - GET `/api/users/blocked`
 - GET `/api/users/likes/recent`
 - GET `/api/users/:userId`（公開プロフィール取得）
+- `recentEncounters` に接触回数 (`encounterCount`) を蓄積し、APIで返却
 
 ### 要件との差分 / 未対応項目
-- PUT `/users/me/device`（通知用デバイストークン登録）
 - 各一覧APIのページネーション
 - Firestore TTLポリシーの導入（`recentEncounters.expiresAt` など、任意だが推奨）
 
@@ -33,12 +33,12 @@ This document summarizes the current implementation versus the documented requir
 - BLE Advertise：15分ごとのtempIdローテーションとバックエンド登録
 - `ApiService` 内でのトークンリフレッシュ（期限前更新＋401リトライ）
 - 設定画面：通知トグル、ブロック一覧、ログアウト／退会導線
+- アプリ内通知バナー（連続すれ違い、友達成立、友達との再会）
 
 ### 要件との差分 / 未対応項目
 - 登録完了後のナビゲーション改善（オンボーディング／ホーム遷移のUX調整）
 - Friends画面のUIブラッシュアップ（タイル表示やプロフィール要素の強化）
 - マッチ成立時の演出（ポップアップ等）
-- BLEのバックグラウンド対応（将来検討事項）
 
 ## Security / Operational Notes
 - Firebaseサービスアカウント鍵は `.gitignore` 対象。コミットしない運用を継続し、必要に応じ `.env` や秘密管理ストアに保存する。
@@ -47,5 +47,5 @@ This document summarizes the current implementation versus the documented requir
 
 ## メモ
 - ドキュメントはHonoベースAPI構成に合わせて更新済み。
-- BLE設計はv0想定（フォアグラウンドのみ）。バックグラウンド対応は後続タスクとする。
-- マッチは相互いいね成立時に即成立。再会通知は将来追加予定。
+- BLEはフォアグラウンド専用として確定。バックグラウンド対応は実装しない方針。
+- マッチは相互いいね成立時に即成立。再会通知はアプリ内通知で提供予定。

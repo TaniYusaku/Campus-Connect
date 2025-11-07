@@ -1,9 +1,9 @@
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 import type { IEncounterRepository } from '../../domain/repositories/encounter.repository';
 import type { ILikeRepository } from '../../domain/repositories/like.repository';
 import type { IMatchRepository } from '../../domain/repositories/match.repository';
-import type { User } from '../../domain/entities/user.entity';
+import type { EncounteredUser, RecentEncounter } from '../../domain/entities/encounter.entity';
 import { LikeRepository } from './like.repository';
 import { MatchRepository } from './match.repository';
 
@@ -29,9 +29,14 @@ export class EncounterRepository implements IEncounterRepository {
       .collection('recentEncounters')
       .doc(userId1);
 
+    const payload = {
+      lastEncounteredAt: timestamp,
+      expiresAt,
+      count: FieldValue.increment(1),
+    };
     const batch = db.batch();
-    batch.set(encounter1Ref, { lastEncounteredAt: timestamp, expiresAt });
-    batch.set(encounter2Ref, { lastEncounteredAt: timestamp, expiresAt });
+    batch.set(encounter1Ref, payload, { merge: true });
+    batch.set(encounter2Ref, payload, { merge: true });
     await batch.commit();
 
     const user1LikesUser2 = await this.likeRepository.exists(userId1, userId2);
@@ -45,7 +50,7 @@ export class EncounterRepository implements IEncounterRepository {
     return false;
   }
 
-  async findRecentEncounteredUsers(userId: string): Promise<User[]> {
+  async findRecentEncounteredUsers(userId: string): Promise<EncounteredUser[]> {
     const db = getFirestore();
     const encountersCol = db.collection('users').doc(userId).collection('recentEncounters');
     const snapshot = await encountersCol.orderBy('lastEncounteredAt', 'desc').limit(50).get();
@@ -54,21 +59,38 @@ export class EncounterRepository implements IEncounterRepository {
       return [];
     }
 
-    const encounteredUserIds = snapshot.docs.map((doc) => doc.id);
+    const metadata = new Map<string, { lastEncounteredAt?: Date; count?: number }>();
+    const encounteredUserIds = snapshot.docs.map((doc) => {
+      const data = doc.data() as Partial<RecentEncounter> & { lastEncounteredAt?: any; count?: number };
+      const lastEncounteredAt = data.lastEncounteredAt
+        ? (data.lastEncounteredAt.toDate ? data.lastEncounteredAt.toDate() : new Date(data.lastEncounteredAt))
+        : undefined;
+      metadata.set(doc.id, {
+        lastEncounteredAt,
+        count: typeof data.count === 'number' ? data.count : undefined,
+      });
+      return doc.id;
+    });
     const limitedUserIds = encounteredUserIds.slice(0, 30);
 
     const usersCol = db.collection('users');
     const userDocs = await usersCol.where('id', 'in', limitedUserIds).get();
 
-    const usersMap = new Map<string, User>();
+    const usersMap = new Map<string, EncounteredUser>();
     userDocs.forEach((doc) => {
-      const user = doc.data() as User;
-      usersMap.set(user.id, user);
+      const user = doc.data() as EncounteredUser;
+      if (!user.id) return;
+      const meta = metadata.get(user.id);
+      usersMap.set(user.id, {
+        ...user,
+        lastEncounteredAt: meta?.lastEncounteredAt,
+        encounterCount: meta?.count ?? user.encounterCount ?? 1,
+      });
     });
 
     const sortedUsers = limitedUserIds
       .map((id) => usersMap.get(id))
-      .filter((user): user is User => user !== undefined);
+      .filter((user): user is EncounteredUser => user !== undefined);
 
     return sortedUsers;
   }

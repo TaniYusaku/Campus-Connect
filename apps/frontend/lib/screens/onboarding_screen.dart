@@ -174,7 +174,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     opacity: _index == _steps.length - 1 ? 1 : 0.8,
                     duration: const Duration(milliseconds: 300),
                     child: Text(
-                      '設定 > 通知 からプッシュ通知をオンにすると、再会したときにすぐ気付けます。',
+                      '設定 > 通知 でアプリ内通知をオンにしておくと、再会したときにすぐ気付けます。',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondary,
                       ),

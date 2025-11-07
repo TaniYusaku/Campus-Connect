@@ -75,6 +75,7 @@ Firestoreのドキュメント指向モデルを最大限に活用し、パフ�
 | :--- | :--- | :--- |
 | `lastEncounteredAt` | `Timestamp` | 最後にすれ違った日時。 |
 | `expiresAt` | `Timestamp` | 失効予定時刻（`lastEncounteredAt + 24h`）。TTLポリシー対象。 |
+| `count` | `number` | 接触回数。初回は1、以降のすれ違いでインクリメント。 |
 
 ###### **5.2.3. `likes` サブコレクション**
 * **パス**: `users/{userId}/likes/{otherUserId}`
@@ -126,7 +127,7 @@ Firestoreセキュリティルールを用いて、ユーザーが自身のデ�
 
 未実装/要検討（要件との差分）
 - `DELETE /users/{userId}/like` いいね取り消し
-- `PUT /users/me/device` デバイストークン登録
+- ~~`PUT /users/me/device` デバイストークン登録~~ → アプリ内通知のみのため不要
 - `GET /users/{userId}` 他者プロフィール取得（公開情報のみ）
 - ページネーション（encounters/friends/blocked 一覧）
 ###### **5.2.6. `tempIds` コレクション**
