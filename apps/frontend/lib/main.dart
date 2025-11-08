@@ -8,6 +8,8 @@ import 'screens/register_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'shared/app_theme.dart';
 import 'widgets/in_app_notification_host.dart';
+import 'screens/welcome_screen.dart';
+import 'screens/terms_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ← Firebase前に必要
@@ -23,26 +25,99 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
-    Widget getHome() {
-      switch (authState) {
-        case AuthState.authenticated:
-          return const _HomeGate();
-        case AuthState.unauthenticated:
-          return const RegisterScreen();
-        case AuthState.checking:
-        default:
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-      }
-    }
 
     return MaterialApp(
       title: 'Campus Connect',
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      home: getHome(),
+      home: LaunchGate(authState: authState),
     );
+  }
+}
+
+class LaunchGate extends StatefulWidget {
+  final AuthState authState;
+
+  const LaunchGate({super.key, required this.authState});
+
+  @override
+  State<LaunchGate> createState() => _LaunchGateState();
+}
+
+class _LaunchGateState extends State<LaunchGate> {
+  static const _welcomeKey = 'welcome_seen';
+  static const _termsKey = 'terms_accepted';
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  bool _loadingPrefs = true;
+  bool _welcomeSeen = false;
+  bool _termsAccepted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final welcome = await _storage.read(key: _welcomeKey);
+    final terms = await _storage.read(key: _termsKey);
+    if (!mounted) return;
+    setState(() {
+      _welcomeSeen = welcome == '1';
+      _termsAccepted = terms == '1';
+      _loadingPrefs = false;
+    });
+  }
+
+  Future<void> _handleWelcomeContinue() async {
+    await _storage.write(key: _welcomeKey, value: '1');
+    if (!mounted) return;
+    setState(() => _welcomeSeen = true);
+  }
+
+  Future<void> _handleTermsAccepted() async {
+    await _storage.write(key: _termsKey, value: '1');
+    if (!mounted) return;
+    setState(() => _termsAccepted = true);
+  }
+
+  Widget _buildAuthEntry() {
+    switch (widget.authState) {
+      case AuthState.authenticated:
+        return const _HomeGate();
+      case AuthState.unauthenticated:
+        return const RegisterScreen();
+      case AuthState.checking:
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loadingPrefs) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!_welcomeSeen) {
+      return WelcomeScreen(onStartPressed: _handleWelcomeContinue);
+    }
+
+    if (!_termsAccepted) {
+      return TermsScreen(onAccepted: _handleTermsAccepted);
+    }
+
+    if (widget.authState == AuthState.checking) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return _buildAuthEntry();
   }
 }
 

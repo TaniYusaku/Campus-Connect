@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/user.dart';
 import 'package:frontend/providers/api_provider.dart';
@@ -258,92 +259,190 @@ class _FriendCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final recentEncounter = _isRecentEncounter(user.lastEncounteredAt);
+    final accentColors = recentEncounter
+        ? [
+            AppColors.accentCrimson.withOpacity(0.12),
+            Colors.white,
+          ]
+        : [
+            Colors.white,
+            Colors.white,
+          ];
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 18),
       child: Material(
-        color: Colors.white,
-        elevation: 4,
-        shadowColor: AppColors.primaryNavy.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(22),
-        child: InkWell(
-          onTap: onOpenProfile,
-          borderRadius: BorderRadius.circular(22),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: AppColors.primaryNavy.withOpacity(0.12),
-                      child: Text(
-                        user.username.characters.first,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryNavy,
+        color: Colors.transparent,
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: accentColors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryNavy.withOpacity(0.06),
+                blurRadius: 24,
+                offset: const Offset(0, 16),
+              ),
+            ],
+            border: Border.all(
+              color: recentEncounter
+                  ? AppColors.accentCrimson.withOpacity(0.25)
+                  : AppColors.outline,
+            ),
+          ),
+          child: InkWell(
+            onTap: onOpenProfile,
+            borderRadius: BorderRadius.circular(26),
+            splashColor: AppColors.primaryNavy.withOpacity(0.08),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _FriendAvatar(user: user, highlight: recentEncounter),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    user.username,
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                if (recentEncounter)
+                                  const _HighlightBadge(
+                                    label: '最近再会！',
+                                    icon: Icons.auto_awesome,
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _InfoPill(
+                                  icon: Icons.school,
+                                  label: user.faculty ?? '学部未設定',
+                                ),
+                                _InfoPill(
+                                  icon: Icons.badge_outlined,
+                                  label: _gradeLabel(user.grade),
+                                ),
+                                if (user.encounterCount > 1)
+                                  _InfoPill(
+                                    icon: Icons.repeat,
+                                    label: '再会 ${user.encounterCount} 回',
+                                  ),
+                                if (user.sameGenderOnly)
+                                  const _InfoPill(
+                                    icon: Icons.group,
+                                    label: '同性のみ',
+                                  ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
+                    ],
+                  ),
+                  if ((user.bio ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      user.bio!.trim(),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
+                  ],
+                  if (user.lastEncounteredAt != null) ...[
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.timelapse,
+                          size: 18,
+                          color: AppColors.textSecondary.withOpacity(0.9),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '最終すれ違い: ${_formatLastEncounter(user.lastEncounteredAt!)}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: onOpenProfile,
+                          icon: const Icon(Icons.person),
+                          label: const Text('プロフィールを見る'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton.filledTonal(
+                        onPressed: onBlock,
+                        icon: const Icon(Icons.block),
+                        tooltip: 'ブロックする',
+                      ),
+                    ],
+                  ),
+                  if (user.snsLinks != null && user.snsLinks!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 18),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            user.username,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                            'SNSでつながる',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${user.faculty ?? '学部未設定'}・${_gradeLabel(user.grade)}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: user.snsLinks!.entries
+                                .where(
+                                  (entry) => entry.value.trim().isNotEmpty,
+                                )
+                                .map(
+                                  (entry) => _SocialChip(
+                                    platform: entry.key,
+                                    handle: entry.value,
+                                  ),
+                                )
+                                .toList(),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    FilledButton.tonalIcon(
-                      onPressed: onOpenProfile,
-                      icon: const Icon(Icons.person),
-                      label: const Text('プロフィールを見る'),
-                    ),
-                    const SizedBox(width: 12),
-                    OutlinedButton.icon(
-                      onPressed: onBlock,
-                      icon: const Icon(Icons.block),
-                      label: const Text('ブロック'),
-                    ),
-                  ],
-                ),
-                if (user.snsLinks != null && user.snsLinks!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 14),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: user.snsLinks!.entries
-                          .where((entry) => entry.value.trim().isNotEmpty)
-                          .map(
-                            (entry) => Chip(
-                              label: Text(
-                                '${entry.key.toUpperCase()}: ${entry.value}',
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -351,7 +450,12 @@ class _FriendCard extends StatelessWidget {
     );
   }
 
-  String _gradeLabel(int? grade) {
+  static bool _isRecentEncounter(DateTime? encounteredAt) {
+    if (encounteredAt == null) return false;
+    return DateTime.now().difference(encounteredAt).inHours < 24;
+  }
+
+  static String _gradeLabel(int? grade) {
     if (grade == null) return '学年未設定';
     switch (grade) {
       case 5:
@@ -360,6 +464,193 @@ class _FriendCard extends StatelessWidget {
         return 'M2';
       default:
         return '${grade}年';
+    }
+  }
+
+  static String _formatLastEncounter(DateTime time) {
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) {
+      return 'たった今';
+    } else if (diff.inHours < 1) {
+      return '${diff.inMinutes}分前';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}時間前';
+    } else {
+      return '${diff.inDays}日前';
+    }
+  }
+}
+
+class _FriendAvatar extends StatelessWidget {
+  const _FriendAvatar({required this.user, required this.highlight});
+
+  final User user;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        CircleAvatar(
+          radius: 32,
+          backgroundColor: AppColors.primaryNavy.withOpacity(0.08),
+          backgroundImage:
+              (user.profilePhotoUrl != null && user.profilePhotoUrl!.isNotEmpty)
+                  ? NetworkImage(user.profilePhotoUrl!)
+                  : null,
+          child:
+              (user.profilePhotoUrl == null || user.profilePhotoUrl!.isEmpty)
+                  ? Text(
+                      user.username.characters.first,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryNavy,
+                      ),
+                    )
+                  : null,
+        ),
+        if (highlight)
+          Positioned(
+            bottom: -6,
+            right: -6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.accentCrimson,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accentCrimson.withOpacity(0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Text(
+                'NEW',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _HighlightBadge extends StatelessWidget {
+  const _HighlightBadge({required this.label, required this.icon});
+
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.softGold.withOpacity(0.75),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppColors.primaryNavy),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primaryNavy,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  const _InfoPill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.textSecondary),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SocialChip extends StatelessWidget {
+  const _SocialChip({required this.platform, required this.handle});
+
+  final String platform;
+  final String handle;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = _iconForPlatform(platform);
+    final label = handle.trim();
+
+    return ActionChip(
+      avatar: Icon(icon, size: 18, color: AppColors.primaryNavy),
+      label: Text(
+        '${platform.toUpperCase()}: $label',
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      onPressed: () async {
+        await Clipboard.setData(ClipboardData(text: label));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$label をクリップボードにコピーしました'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      backgroundColor: AppColors.paleGold.withOpacity(0.7),
+    );
+  }
+
+  static IconData _iconForPlatform(String key) {
+    switch (key.toLowerCase()) {
+      case 'x':
+      case 'twitter':
+        return Icons.alternate_email;
+      case 'instagram':
+        return Icons.camera_alt_outlined;
+      case 'line':
+        return Icons.chat_bubble_outline;
+      default:
+        return Icons.link;
     }
   }
 }

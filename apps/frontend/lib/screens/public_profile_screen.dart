@@ -83,6 +83,7 @@ Widget buildPublicProfileContent(BuildContext context, User user,
   final snsEntries =
       user.snsLinks?.entries.where((entry) => entry.value.trim().isNotEmpty).toList() ??
           const [];
+  final canShowSns = user.isFriend && snsEntries.isNotEmpty;
   final faculty = user.faculty ?? '学部未設定';
   final gradeLabel = _gradeLabel(user.grade);
   final genderLabel = user.gender ?? '未設定';
@@ -155,7 +156,7 @@ Widget buildPublicProfileContent(BuildContext context, User user,
               ),
               const SizedBox(height: 24),
             ],
-            if (snsEntries.isNotEmpty) ...[
+            if (canShowSns) ...[
               Text('SNS', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               ...snsEntries.map(

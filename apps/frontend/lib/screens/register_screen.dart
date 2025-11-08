@@ -4,7 +4,6 @@ import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
 import 'package:frontend/shared/profile_constants.dart';
 import 'login_screen.dart';
-import 'onboarding_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -90,12 +89,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('登録してログインしました')));
-        // オンボーディング（初回のみ）へ遷移
-        if (!mounted) return;
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const OnboardingScreen()));
+        ).showSnackBar(
+          const SnackBar(
+            content: Text('登録してログインしました。ホームに切り替えます...'),
+          ),
+        );
+        // ホーム側（_HomeGate）でオンボーディングを一度だけ挟むため、ルートを初期状態に戻す
+        Navigator.of(context).popUntil((route) => route.isFirst);
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(

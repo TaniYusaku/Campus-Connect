@@ -26,6 +26,8 @@ This document summarizes the current implementation versus the documented requir
 ## Frontend (Flutter)
 ### 実装済み
 - 登録 / ログイン画面および状態管理
+- 登録完了直後は自動でホームへ遷移し、ホーム側でオンボーディングを1回だけ挟む導線に統一
+- Friendsタブ：カード型タイルで学部/学年・再会情報・SNSリンクを見やすく表示（SNSはコピー可のチップで提供）
 - Encountersタブ：`/api/users/encounters` を表示し、いいね／取り消し／ブロック操作に対応
 - Friendsタブ：マッチ済みユーザー一覧表示、プロフィールモーダル表示、ブロック操作
 - Profileタブ：プロフィール編集（写真アップロード、自己紹介、学部・学年、SNSリンクなど）
@@ -36,8 +38,6 @@ This document summarizes the current implementation versus the documented requir
 - アプリ内通知バナー（連続すれ違い、友達成立、友達との再会）
 
 ### 要件との差分 / 未対応項目
-- 登録完了後のナビゲーション改善（オンボーディング／ホーム遷移のUX調整）
-- Friends画面のUIブラッシュアップ（タイル表示やプロフィール要素の強化）
 - マッチ成立時の演出（ポップアップ等）
 
 ## Security / Operational Notes

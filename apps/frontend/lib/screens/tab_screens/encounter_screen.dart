@@ -119,6 +119,24 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
     });
   }
 
+  String _formatRelativeTime(DateTime? timestamp) {
+    if (timestamp == null) {
+      return '時刻情報なし';
+    }
+    final now = DateTime.now();
+    final diff = now.difference(timestamp);
+    if (diff.isNegative || diff.inMinutes < 1) {
+      return 'たった今';
+    }
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}分前';
+    }
+    if (diff.inHours < 24) {
+      return '${diff.inHours}時間前';
+    }
+    return '${diff.inDays}日前';
+  }
+
   Future<void> _restoreTabIndex() async {
     final stored = await _uiStorage.read(key: _tabStorageKey);
     final index = int.tryParse(stored ?? '0');
@@ -151,7 +169,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
       if (notificationsEnabled && hasNewEncounter) {
         if (currentCount >= 2 && previousCount < currentCount) {
           notifier?.show(
-            title: '${user.username}さんと${currentCount}回すれ違っています',
+            title: '${user.username}さんと$currentCount回すれ違っています',
             message: 'よく会う相手には思い切っていいねしてみましょう。',
             category: NotificationCategory.repeatEncounter,
           );
@@ -194,7 +212,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
             gradient: LinearGradient(
               colors: [
                 AppColors.softGold,
-                AppColors.primaryNavy.withOpacity(0.92),
+                AppColors.primaryNavy.withValues(alpha: 0.92),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -202,7 +220,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primaryNavy.withOpacity(0.25),
+                color: AppColors.primaryNavy.withValues(alpha: 0.25),
                 blurRadius: 26,
                 offset: const Offset(0, 14),
               ),
@@ -238,7 +256,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
               Text(
                 '${user.username} さんと再会したらメッセージを送ってみましょう。',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
@@ -295,10 +313,9 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
     final scanState = ref.watch(bleScanProvider);
     final advState = ref.watch(bleAdvertiseProvider);
     final friendIds = ref.watch(friendsFutureProvider).maybeWhen(
-      data: (friends) => friends.map((u) => u.id).toSet(),
-      orElse: () => <String>{},
-    ) ??
-    <String>{};
+          data: (friends) => friends.map((u) => u.id).toSet(),
+          orElse: () => <String>{},
+        );
 
     final running = scanState.scanning || advState.advertising;
     final buttonLabel = running ? 'スキャン・広告を停止' : 'すれ違いスキャンを開始';
@@ -316,15 +333,15 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
       _pulseActive = false;
     }
 
-    final refreshEncounters = () async {
-      await ref.refresh(encounterListProvider.future);
+    Future<void> refreshEncounters() async {
+      final _ = await ref.refresh(encounterListProvider.future);
       await ref.read(likedHistoryProvider.notifier).purgeExpired();
-    };
+    }
 
-    final refreshLikes = () async {
+    Future<void> refreshLikes() async {
       await ref.read(likedHistoryProvider.notifier).purgeExpired();
-      await ref.refresh(encounterListProvider.future);
-    };
+      final _ = await ref.refresh(encounterListProvider.future);
+    }
 
     Widget buildEncounterTab() {
       return encounterAsync.when(
@@ -366,6 +383,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
               itemBuilder: (context, index) {
                 final user = filtered[index];
                 final isLiked = likedSet.contains(user.id);
+                final lastSeenText = _formatRelativeTime(user.lastEncounteredAt);
                 return Card(
                   child: ListTile(
                     contentPadding:
@@ -393,6 +411,14 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                             _InfoChip(label: '${user.grade}年'),
                           ],
                         ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '最終すれ違い: $lastSeenText',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
+                        ),
                       ],
                     ),
                     onTap: () {
@@ -418,7 +444,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                           final api = ref.read(apiServiceProvider);
                           if (!isLiked) {
                             final res = await api.likeUser(user.id);
-                            if (!context.mounted) return;
+                            if (!mounted) return;
                             if (!res.ok) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('いいねに失敗しました')),
@@ -452,7 +478,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                             }
                           } else {
                             final ok = await api.unlikeUser(user.id);
-                            if (!context.mounted) return;
+                            if (!mounted) return;
                             if (ok) {
                               ref.read(likedSetProvider.notifier).unmark(user.id);
                               await ref
@@ -499,7 +525,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                           if (confirmed != true) return;
                           final api = ref.read(apiServiceProvider);
                           final ok = await api.blockUser(user.id);
-                          if (!context.mounted) return;
+                          if (!mounted) return;
                           if (ok) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('ブロックしました')),
@@ -565,7 +591,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 leading: CircleAvatar(
-                  backgroundColor: AppColors.accentCrimson.withOpacity(0.12),
+                  backgroundColor: AppColors.accentCrimson.withValues(alpha: 0.12),
                   child: const Icon(Icons.favorite, color: AppColors.accentCrimson),
                 ),
                 title: Text(entry.username),
@@ -598,7 +624,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                   onPressed: () async {
                     final api = ref.read(apiServiceProvider);
                     final ok = await api.unlikeUser(entry.userId);
-                    if (!context.mounted) return;
+                    if (!mounted) return;
                     if (ok) {
                       ref.read(likedSetProvider.notifier).unmark(entry.userId);
                     await ref
@@ -759,8 +785,8 @@ class _ScanPulseIndicator extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: running
-            ? AppColors.softGold.withOpacity(0.2)
-            : Colors.white.withOpacity(0.18),
+            ? AppColors.softGold.withValues(alpha: 0.2)
+            : Colors.white.withValues(alpha: 0.18),
         border: Border.all(color: Colors.white, width: 2),
       ),
       child: Icon(
