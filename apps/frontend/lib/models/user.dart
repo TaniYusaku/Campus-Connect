@@ -8,7 +8,6 @@ class User {
   final String? profilePhotoUrl;
   final Map<String, String>? snsLinks; // e.g. { 'x': 'id', 'instagram': 'id' }
   final String? gender;
-  final bool sameGenderOnly;
   final DateTime? lastEncounteredAt;
   final int encounterCount;
   final bool isFriend;
@@ -23,7 +22,6 @@ class User {
     this.profilePhotoUrl,
     this.snsLinks,
     this.gender,
-    this.sameGenderOnly = false,
     this.lastEncounteredAt,
     this.encounterCount = 1,
     this.isFriend = false,
@@ -50,7 +48,6 @@ class User {
       profilePhotoUrl: json['profilePhotoUrl'] as String?,
       snsLinks: links,
       gender: json['gender'] as String?,
-      sameGenderOnly: json['sameGenderOnly'] == true,
       lastEncounteredAt: _parseEncounteredAt(json['lastEncounteredAt']),
       encounterCount: _parseEncounterCount(json['encounterCount']),
       isFriend: json['isFriend'] == true,

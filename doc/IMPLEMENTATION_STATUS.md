@@ -18,6 +18,7 @@ This document summarizes the current implementation versus the documented requir
 - GET `/api/users/likes/recent`
 - GET `/api/users/:userId`（公開プロフィール取得）
 - `recentEncounters` に接触回数 (`encounterCount`) を蓄積し、APIで返却
+- 同性限定フィルタは廃止し、`/api/users/encounters` はブロック状態のみでフィルタリング
 
 ### 要件との差分 / 未対応項目
 - 各一覧APIのページネーション
@@ -28,7 +29,7 @@ This document summarizes the current implementation versus the documented requir
 - 登録 / ログイン画面および状態管理
 - 登録完了直後は自動でホームへ遷移し、ホーム側でオンボーディングを1回だけ挟む導線に統一
 - Friendsタブ：カード型タイルで学部/学年・再会情報・SNSリンクを見やすく表示（SNSはコピー可のチップで提供）
-- Encountersタブ：`/api/users/encounters` を表示し、いいね／取り消し／ブロック操作に対応
+- Encountersタブ：`/api/users/encounters` を表示し、いいね／取り消し／ブロック操作に対応。さらに「すべて/男性/女性」のタブと「同じ学部だけ」「同じ学年だけ」のフィルタを実装
 - Friendsタブ：マッチ済みユーザー一覧表示、プロフィールモーダル表示、ブロック操作
 - Profileタブ：プロフィール編集（写真アップロード、自己紹介、学部・学年、SNSリンクなど）
 - BLE Scan画面：フォアグラウンドスキャン、RSSIしきい値調整、Campus Connectフィルタ切り替え

@@ -348,11 +348,6 @@ class _FriendCard extends StatelessWidget {
                                     icon: Icons.repeat,
                                     label: '再会 ${user.encounterCount} 回',
                                   ),
-                                if (user.sameGenderOnly)
-                                  const _InfoPill(
-                                    icon: Icons.group,
-                                    label: '同性のみ',
-                                  ),
                               ],
                             ),
                           ],

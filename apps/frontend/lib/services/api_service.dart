@@ -294,7 +294,6 @@ class ApiService {
     Map<String, String>? snsLinks,
     String? profilePhotoUrl,
     String? gender,
-    bool? sameGenderOnly,
   }) async {
     final Map<String, dynamic> payload = {};
     if (userName != null) payload['userName'] = userName;
@@ -304,7 +303,6 @@ class ApiService {
     if (snsLinks != null) payload['snsLinks'] = snsLinks;
     if (profilePhotoUrl != null) payload['profilePhotoUrl'] = profilePhotoUrl;
     if (gender != null) payload['gender'] = gender;
-    if (sameGenderOnly != null) payload['sameGenderOnly'] = sameGenderOnly;
 
     final response = await _authorizedRequest((token) {
       return http.put(
