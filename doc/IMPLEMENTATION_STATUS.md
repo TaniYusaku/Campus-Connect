@@ -7,7 +7,7 @@ This document summarizes the current implementation versus the documented requir
 - POST `/api/auth/register`, POST `/api/auth/login`, POST `/api/auth/refresh`
 - GET `/api/users/me`, PUT `/api/users/me`, DELETE `/api/users/me`
 - GET `/api/users/encounters`
-- POST `/api/encounters`
+- POST `/api/encounters`（手動登録用エンドポイント。通常フローは /observe で相互検知後に生成）
 - POST `/api/encounters/observe`（tempId観測イベントの受信・相互観測でEncounter生成）
 - POST `/api/encounters/register-tempid`（広告中のtempIdを登録、期限付き）
 - POST `/api/users/:userId/like`（相互いいね成立時に即マッチ作成）
@@ -23,6 +23,7 @@ This document summarizes the current implementation versus the documented requir
 ### 要件との差分 / 未対応項目
 - 各一覧APIのページネーション
 - Firestore TTLポリシーの導入（`recentEncounters.expiresAt` など、任意だが推奨）
+- アカウント削除時にlikes/matchesなど関連データをまとめて削除する仕組み（現状はユーザードキュメントとAuthユーザーのみ）
 
 ## Frontend (Flutter)
 ### 実装済み
@@ -39,7 +40,7 @@ This document summarizes the current implementation versus the documented requir
 - アプリ内通知バナー（連続すれ違い、友達成立、友達との再会）
 
 ### 要件との差分 / 未対応項目
-- マッチ成立時の演出（ポップアップ等）
+- 現時点でドキュメントとの差分はありません。新機能を追加する際に更新します。
 
 ## Security / Operational Notes
 - Firebaseサービスアカウント鍵は `.gitignore` 対象。コミットしない運用を継続し、必要に応じ `.env` や秘密管理ストアに保存する。

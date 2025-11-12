@@ -23,7 +23,7 @@ class ApiService {
     'API_BASE_URL',
     
     //192.168.111.145
-    defaultValue: 'http://192.168.111.123:3000/api',
+    defaultValue: 'http://esencnts.kyoto-su.ac.jp:3000/api',
   );
 
   // Concurrency guard for refresh
