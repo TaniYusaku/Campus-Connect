@@ -203,18 +203,17 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
       final becameFriend = isFriendNow && !wasFriend;
 
       if (notificationsEnabled && hasNewEncounter) {
-        if (currentCount >= 2 && previousCount < currentCount) {
-          notifier?.show(
-            title: '${user.username}さんと$currentCount回すれ違っています',
-            message: 'よく会う相手には思い切っていいねしてみましょう。',
-            category: NotificationCategory.repeatEncounter,
-          );
-        }
         if (isFriendNow) {
           notifier?.show(
             title: '友達の${user.username}さんと再会！',
             message: 'アプリで繋がりを確認して声をかけてみましょう。',
             category: NotificationCategory.friendEncounter,
+          );
+        } else if (currentCount >= 2 && previousCount < currentCount) {
+          notifier?.show(
+            title: '${user.username}さんと$currentCount回すれ違っています',
+            message: 'よく会う相手には思い切っていいねしてみましょう。',
+            category: NotificationCategory.repeatEncounter,
           );
         }
       }

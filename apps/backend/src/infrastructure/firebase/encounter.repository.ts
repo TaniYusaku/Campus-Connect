@@ -3,20 +3,32 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import type { IEncounterRepository } from '../../domain/repositories/encounter.repository';
 import type { ILikeRepository } from '../../domain/repositories/like.repository';
 import type { IMatchRepository } from '../../domain/repositories/match.repository';
+import type { IBlockRepository } from '../../domain/repositories/block.repository';
 import type { EncounteredUser, RecentEncounter } from '../../domain/entities/encounter.entity';
 import { LikeRepository } from './like.repository';
 import { MatchRepository } from './match.repository';
+import { BlockRepository } from './block.repository';
 
 export class EncounterRepository implements IEncounterRepository {
   constructor(
     private readonly likeRepository: ILikeRepository = new LikeRepository(),
     private readonly matchRepository: IMatchRepository = new MatchRepository(),
+    private readonly blockRepository: IBlockRepository = new BlockRepository(),
   ) {}
 
   async create(userId1: string, userId2: string): Promise<boolean> {
     const db = getFirestore();
     const timestamp = new Date();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Skip encounter creation if either side has blocked the other
+    const [user1Blocked, user2Blocked] = await Promise.all([
+      this.blockRepository.findAllIds(userId1),
+      this.blockRepository.findAllIds(userId2),
+    ]);
+    if (user1Blocked.includes(userId2) || user2Blocked.includes(userId1)) {
+      return false;
+    }
 
     const encounter1Ref = db
       .collection('users')
