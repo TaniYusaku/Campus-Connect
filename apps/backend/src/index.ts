@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
 import { initializeApp, cert, type ServiceAccount } from 'firebase-admin/app'
-import serviceAccount from '../serviceAccountKey.json' assert { type: 'json' }
+import serviceAccount from '../serviceAccountKey.json' 
 import { authRouter } from './presentation/routers/auth.router'
 import { userRouter } from './presentation/routers/user.router'
 import { encounterRouter } from './presentation/routers/encounter.router'
