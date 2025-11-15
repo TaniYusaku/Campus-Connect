@@ -1,5 +1,5 @@
 import { getFirestore } from "firebase-admin/firestore";
-import type { IMatchRepository } from "../../domain/repositories/match.repository";
+import type { IMatchRepository } from "../../domain/repositories/match.repository.js";
 
 export class MatchRepository implements IMatchRepository {
   async create(userId1: string, userId2: string): Promise<void> {

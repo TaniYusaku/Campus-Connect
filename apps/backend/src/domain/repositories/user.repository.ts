@@ -1,4 +1,4 @@
-import type { User } from '../entities/user.entity';
+import type { User } from '../entities/user.entity.js';
 
 // ユーザーデータに関する操作のインターフェース（契約）を定義します
 export interface IUserRepository {

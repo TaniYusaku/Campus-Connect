@@ -1,13 +1,13 @@
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
-import type { IEncounterRepository } from '../../domain/repositories/encounter.repository';
-import type { ILikeRepository } from '../../domain/repositories/like.repository';
-import type { IMatchRepository } from '../../domain/repositories/match.repository';
-import type { IBlockRepository } from '../../domain/repositories/block.repository';
-import type { EncounteredUser, RecentEncounter } from '../../domain/entities/encounter.entity';
-import { LikeRepository } from './like.repository';
-import { MatchRepository } from './match.repository';
-import { BlockRepository } from './block.repository';
+import type { IEncounterRepository } from '../../domain/repositories/encounter.repository.js';
+import type { ILikeRepository } from '../../domain/repositories/like.repository.js';
+import type { IMatchRepository } from '../../domain/repositories/match.repository.js';
+import type { IBlockRepository } from '../../domain/repositories/block.repository.js';
+import type { EncounteredUser, RecentEncounter } from '../../domain/entities/encounter.entity.js';
+import { LikeRepository } from './like.repository.js';
+import { MatchRepository } from './match.repository.js';
+import { BlockRepository } from './block.repository.js';
 
 export class EncounterRepository implements IEncounterRepository {
   constructor(

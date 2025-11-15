@@ -1,5 +1,5 @@
 import { getFirestore } from 'firebase-admin/firestore';
-import type { DeviceUpsertPayload, IDeviceRepository } from '../../domain/repositories/device.repository';
+import type { DeviceUpsertPayload, IDeviceRepository } from '../../domain/repositories/device.repository.js';
 
 const encodeTokenId = (token: string) => Buffer.from(token).toString('base64url');
 

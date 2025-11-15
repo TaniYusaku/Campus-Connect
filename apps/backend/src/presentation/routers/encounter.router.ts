@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { authMiddleware } from '../middlewares/auth.middleware';
-import { EncounterRepository } from '../../infrastructure/firebase/encounter.repository';
+import { authMiddleware } from '../middlewares/auth.middleware.js';
+import { EncounterRepository } from '../../infrastructure/firebase/encounter.repository.js';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
 const encounterSchema = z.object({

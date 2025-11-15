@@ -1,5 +1,5 @@
 import { getFirestore } from "firebase-admin/firestore";
-import type { ILikeRepository } from "../../domain/repositories/like.repository";
+import type { ILikeRepository } from "../../domain/repositories/like.repository.js";
 
 export class LikeRepository implements ILikeRepository {
   async create(likingUserId: string, likedUserId: string): Promise<void> {

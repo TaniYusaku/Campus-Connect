@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { UserRepository } from '../../infrastructure/firebase/user.repository';
+import { UserRepository } from '../../infrastructure/firebase/user.repository.js';
 
 // ユーザー登録の入力値スキーマ
 const registerSchema = z.object({

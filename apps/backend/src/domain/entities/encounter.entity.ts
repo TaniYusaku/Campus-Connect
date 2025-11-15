@@ -1,4 +1,4 @@
-import type { User } from './user.entity';
+import type { User } from './user.entity.js';
 
 export type Encounter = {
   id: string; // FirestoreのドキュメントID

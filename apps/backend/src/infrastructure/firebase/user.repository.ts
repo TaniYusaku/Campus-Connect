@@ -1,7 +1,7 @@
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
-import type { IUserRepository, UpdatableUserInfo } from '../../domain/repositories/user.repository';
-import type { User } from '../../domain/entities/user.entity';
+import type { IUserRepository, UpdatableUserInfo } from '../../domain/repositories/user.repository.js';
+import type { User } from '../../domain/entities/user.entity.js';
 import axios from 'axios';
 
 // IUserRepositoryインターフェースを実際にFirebaseを使って実装するクラス

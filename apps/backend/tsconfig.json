@@ -1,17 +1,28 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    // Node.js v22でも安全な最新ターゲット
+    "target": "ES2022",
+
+    // NodeNextにすることで import/export をネイティブESMとして扱う
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    // 開発時の互換性オプション
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "verbatimModuleSyntax": false,
+
+    // ビルド出力
     "rootDir": "src",
     "outDir": "dist",
+
+    // JSX（hono/jsxを使うなら残してOK）
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
+
+    // Node型補完
     "types": ["node"]
   },
   "exclude": ["node_modules"]

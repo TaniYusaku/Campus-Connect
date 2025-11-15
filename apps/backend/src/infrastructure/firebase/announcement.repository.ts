@@ -1,5 +1,5 @@
 import { getFirestore } from 'firebase-admin/firestore';
-import type { Announcement } from '../../domain/entities/announcement.entity';
+import type { Announcement } from '../../domain/entities/announcement.entity.js';
 
 export class AnnouncementRepository {
   async listRecent(limit = 20): Promise<Announcement[]> {

@@ -1,5 +1,5 @@
 import { getMessaging } from 'firebase-admin/messaging';
-import type { IDeviceRepository } from '../../domain/repositories/device.repository';
+import type { IDeviceRepository } from '../../domain/repositories/device.repository.js';
 
 const INVALID_TOKEN_CODES = new Set([
   'messaging/invalid-registration-token',

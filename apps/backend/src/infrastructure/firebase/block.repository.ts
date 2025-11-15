@@ -1,5 +1,5 @@
 import { getFirestore } from 'firebase-admin/firestore';
-import type { IBlockRepository } from '../../domain/repositories/block.repository';
+import type { IBlockRepository } from '../../domain/repositories/block.repository.js';
 
 export class BlockRepository implements IBlockRepository {
   async findAll(userId: string): Promise<string[]> {

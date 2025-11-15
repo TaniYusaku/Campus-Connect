@@ -1,5 +1,4 @@
-import type { Encounter } from '../entities/encounter.entity';
-import type { EncounteredUser } from '../entities/encounter.entity';
+import type { Encounter, EncounteredUser } from '../entities/encounter.entity.js';
 
 export interface IEncounterRepository {
   create(userId: string, encounteredUserId: string): Promise<boolean>;

@@ -1,16 +1,18 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '../middlewares/auth.middleware';
-import { UserRepository } from '../../infrastructure/firebase/user.repository';
+import { authMiddleware } from '../middlewares/auth.middleware.js';
+import { UserRepository } from '../../infrastructure/firebase/user.repository.js';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { LikeRepository } from '../../infrastructure/firebase/like.repository';
-import type { ILikeRepository } from '../../domain/repositories/like.repository';
-import { EncounterRepository } from '../../infrastructure/firebase/encounter.repository';
-import { MatchRepository } from '../../infrastructure/firebase/match.repository';
-import { BlockRepository } from '../../infrastructure/firebase/block.repository';
-import type { IEncounterRepository } from '../../domain/repositories/encounter.repository';
-import type { IMatchRepository } from '../../domain/repositories/match.repository';
-import type { IBlockRepository } from '../../domain/repositories/block.repository';
+import { LikeRepository } from '../../infrastructure/firebase/like.repository.js';
+import type { ILikeRepository } from '../../domain/repositories/like.repository.js';
+import { EncounterRepository } from '../../infrastructure/firebase/encounter.repository.js';
+import { MatchRepository } from '../../infrastructure/firebase/match.repository.js';
+import { BlockRepository } from '../../infrastructure/firebase/block.repository.js';
+import type { IEncounterRepository } from '../../domain/repositories/encounter.repository.js';
+import type { IMatchRepository } from '../../domain/repositories/match.repository.js';
+import type { IBlockRepository } from '../../domain/repositories/block.repository.js';
+import type { EncounteredUser } from '../../domain/entities/encounter.entity.js';
+import type { User } from '../../domain/entities/user.entity.js';
 // (deduped) ILikeRepository/LikeRepository imports are above
 import { getStorage } from 'firebase-admin/storage';
 
@@ -140,19 +142,16 @@ userRouter.get('/encounters', async (c) => {
   const blockedUserIds = await blockRepository.findAllIds(userId);
   const friendIds = await matchRepository.findAll(userId);
   // すれ違ったユーザー一覧を取得
-  const users = await encounterRepository.findRecentEncounteredUsers(userId);
+  const users: EncounteredUser[] = await encounterRepository.findRecentEncounteredUsers(userId);
   const safeUsers = users
-    .filter(user => !blockedUserIds.includes(user.id))
-    .map((user) => {
+    .filter((user: EncounteredUser) => !blockedUserIds.includes(user.id))
+    .map((user: EncounteredUser) => {
       const {
         email,
         lastEncounteredAt,
         encounterCount,
         ...rest
-      } = user as typeof user & {
-        lastEncounteredAt?: Date;
-        encounterCount?: number;
-      };
+      } = user;
       return {
         ...rest,
         lastEncounteredAt: lastEncounteredAt instanceof Date
@@ -171,9 +170,9 @@ userRouter.get('/friends', async (c) => {
   const blockedUserIds = await blockRepository.findAllIds(userId);
   const friendIds = await matchRepository.findAll(userId);
   // ブロック済みユーザーを除外
-  const filteredIds = friendIds.filter(id => !blockedUserIds.includes(id));
-  const users = await userRepository.findByIds(filteredIds);
-  const safeUsers = users.map(({ email, ...rest }) => rest);
+  const filteredIds = friendIds.filter((id: string) => !blockedUserIds.includes(id));
+  const users: User[] = await userRepository.findByIds(filteredIds);
+  const safeUsers = users.map(({ email, ...rest }: User) => rest);
   return c.json(safeUsers);
 });
 
@@ -181,8 +180,8 @@ userRouter.get('/friends', async (c) => {
 userRouter.get('/blocked', async (c) => {
   const userId = c.get('user').uid;
   const blockedIds = await blockRepository.findAll(userId);
-  const users = await userRepository.findByIds(blockedIds);
-  const safeUsers = users.map(({ email, ...rest }) => rest);
+  const users: User[] = await userRepository.findByIds(blockedIds);
+  const safeUsers = users.map(({ email, ...rest }: User) => rest);
   return c.json(safeUsers);
 });
 
@@ -196,9 +195,9 @@ userRouter.get('/likes/recent', async (c) => {
   if (likedIds.length === 0) return c.json([]);
   // Exclude blocked users
   const blockedUserIds = await blockRepository.findAllIds(userId);
-  const filtered = likedIds.filter((id) => !blockedUserIds.includes(id));
-  const users = await userRepository.findByIds(filtered);
-  const safeUsers = users.map(({ email, ...rest }) => rest);
+  const filtered = likedIds.filter((id: string) => !blockedUserIds.includes(id));
+  const users: User[] = await userRepository.findByIds(filtered);
+  const safeUsers = users.map(({ email, ...rest }: User) => rest);
   return c.json(safeUsers);
 });
 
