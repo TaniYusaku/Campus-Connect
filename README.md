@@ -12,7 +12,7 @@ Quick Start
   - Default (if omitted) is defined in `lib/services/api_service.dart`.
  - Backend cleanup:
    - Encounters: `CLEANUP_INTERVAL_MINUTES=60` (default). Disable with `DISABLE_CLEANUP=1`.
-   - TempIds: `TEMPIDS_CLEANUP_INTERVAL_MINUTES=15` (default). Disable with `DISABLE_TEMPIDS_CLEANUP=1`.
+   - TempIds: `TEMPIDS_CLEANUP_INTERVAL_MINUTES=5` (default). Disable with `DISABLE_TEMPIDS_CLEANUP=1`.
 
 Docs
 - Requirements: `doc/REQUIREMENTS.md`
@@ -47,7 +47,7 @@ BLE Security Summary
 - If you see `FAILED_PRECONDITION` from the cleanup, create a Composite Index for collection group `recentEncounters` on field `lastEncounteredAt` (ascending), or rely on the built-in fallback which iterates per-user collections.
 
 TempIds Cleanup
-- Expired tempIds (`tempIds/*` with `expiresAt <= now`) are periodically deleted (default every 15 minutes).
+- Expired tempIds (`tempIds/*` with `expiresAt <= now`) are periodically deleted (default every 5 minutes).
 - Production alternative: enable TTL on `tempIds.expiresAt` and let Firestore auto-delete them.
 
 Security

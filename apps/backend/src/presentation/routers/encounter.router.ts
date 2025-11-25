@@ -17,9 +17,11 @@ const observeSchema = z.object({
 
 const registerTempIdSchema = z.object({
   tempId: z.string().min(1),
-  // Optional ISO string or epoch millis; server will cap to around 16 minutes if omitted
+  // Deprecated: server now ignores client-provided expiry and relies on its own clock.
   expiresAt: z.union([z.string(), z.number()]).optional(),
 });
+
+const tempIdTtlMinutes = Math.max(1, Number(process.env.TEMPID_TTL_MINUTES ?? '17'));
 
 export const encounterRouter = new Hono();
 const encounterRepository = new EncounterRepository();
@@ -100,15 +102,44 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
   const bothSeen = a != null && b != null && Math.abs(a - b) <= mutualWindowMs && (nowMs - Math.min(a, b)) <= mutualWindowMs;
   const cooledDown = lastEnc == null || (nowMs - lastEnc) > mutualWindowMs;
 
+  console.log('observe resolved', {
+    reporter: me,
+    observedUser: otherId,
+    fromU1toU2,
+    lastU1ToU2: a,
+    lastU2ToU1: b,
+    mutualCandidate: bothSeen,
+    cooledDown,
+  });
+
   if (bothSeen && cooledDown) {
+    let shouldCreate = false;
     try {
-      console.log('observe mutual: creating encounter', { u1, u2 });
-      const matchCreated = await encounterRepository.create(u1, u2);
-      await obsRef.set({ lastEncounteredAt: now }, { merge: true });
-      return c.json({ ok: true, resolved: true, mutual: true, matchCreated }, 201);
+      shouldCreate = await db.runTransaction<boolean>(async (tx) => {
+        const latest = await tx.get(obsRef);
+        const data = latest.data() as {
+          lastEncounteredAt?: FirebaseFirestore.Timestamp;
+        } | undefined;
+        const lastEncTx = data?.lastEncounteredAt?.toMillis();
+        if (lastEncTx == null || nowMs - lastEncTx > mutualWindowMs) {
+          tx.set(obsRef, { lastEncounteredAt: now }, { merge: true });
+          return true;
+        }
+        return false;
+      });
     } catch (e) {
-      console.error('observe mutual create failed', e);
+      console.error('observe mutual transaction failed', e);
       return c.json({ error: 'Failed to record mutual encounter' }, 500);
+    }
+    if (shouldCreate) {
+      try {
+        console.log('observe mutual: creating encounter', { u1, u2 });
+        const matchCreated = await encounterRepository.create(u1, u2);
+        return c.json({ ok: true, resolved: true, mutual: true, matchCreated }, 201);
+      } catch (e) {
+        console.error('observe mutual create failed', e);
+        return c.json({ error: 'Failed to record mutual encounter' }, 500);
+      }
     }
   }
 
@@ -119,24 +150,28 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
 // 広告側が現在の一時IDを登録し、観測時解決に使う
 encounterRouter.post('/register-tempid', zValidator('json', registerTempIdSchema), async (c) => {
   const { uid } = c.get('user');
-  const { tempId, expiresAt } = c.req.valid('json');
+  const { tempId, expiresAt: clientExpiresAt } = c.req.valid('json');
   const db = getFirestore();
-  // Default expiry ~16 minutes from now to cover 15-min rotation plus margin
+  // Server-trusted expiry: ignore client clock to avoid skew issues.
   const now = Date.now();
-  let expiresMs: number;
-  if (typeof expiresAt === 'number') {
-    expiresMs = expiresAt;
-  } else if (typeof expiresAt === 'string') {
-    const parsed = Date.parse(expiresAt);
-    expiresMs = isNaN(parsed) ? now + 16 * 60 * 1000 : parsed;
-  } else {
-    expiresMs = now + 16 * 60 * 1000;
-  }
+  const expiresMs = now + tempIdTtlMinutes * 60 * 1000;
   const payload = {
     userId: uid,
     updatedAt: Timestamp.fromMillis(now),
     expiresAt: Timestamp.fromMillis(expiresMs),
   };
-  await db.collection('tempIds').doc(tempId).set(payload, { merge: true });
-  return c.json({ ok: true });
+  console.log('register-tempid request', {
+    uid,
+    tempId,
+    expiresAtMs: expiresMs,
+    clientExpiresAt,
+  });
+  try {
+    await db.collection('tempIds').doc(tempId).set(payload, { merge: true });
+    console.log('register-tempid stored', { uid, tempId });
+    return c.json({ ok: true, expiresAt: new Date(expiresMs).toISOString() });
+  } catch (err) {
+    console.error('register-tempid error', { uid, tempId, err });
+    throw err;
+  }
 });

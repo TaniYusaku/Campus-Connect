@@ -9,6 +9,7 @@ class BleService {
   StreamSubscription<List<ScanResult>>? _scanSub;
 
   Stream<List<ScanResult>> get scanResults => FlutterBluePlus.onScanResults;
+  Stream<bool> get scanActiveStream => FlutterBluePlus.isScanning;
 
   Future<bool> isSupported() async {
     return await FlutterBluePlus.isSupported;

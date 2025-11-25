@@ -211,7 +211,7 @@ class ApiService {
   }
 
   // 現在の一時ID(tempId)をサーバーへ登録し、観測時の解決に使う
-  Future<void> registerTempId({
+  Future<bool> registerTempId({
     required String tempId,
     DateTime? expiresAt,
   }) async {
@@ -230,12 +230,15 @@ class ApiService {
           }),
         );
       });
-      if (response == null) return;
+      if (response == null) return false;
       if (response.statusCode >= 400) {
         print('registerTempId failed: ${response.statusCode} ${response.body}');
+        return false;
       }
+      return true;
     } catch (e) {
       print('registerTempId error: $e');
+      return false;
     }
   }
 

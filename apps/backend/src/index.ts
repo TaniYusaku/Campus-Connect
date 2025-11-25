@@ -99,7 +99,7 @@ if (disableCleanup) {
   startRecentEncountersCleanup(cleanupIntervalMin);
 }
 
-const tempIdsIntervalMin = Number(process.env.TEMPIDS_CLEANUP_INTERVAL_MINUTES ?? '15');
+const tempIdsIntervalMin = Number(process.env.TEMPIDS_CLEANUP_INTERVAL_MINUTES ?? '5');
 const disableTempIdsCleanup =
   process.env.DISABLE_TEMPIDS_CLEANUP === '1' ||
   tempIdsIntervalMin <= 0 ||

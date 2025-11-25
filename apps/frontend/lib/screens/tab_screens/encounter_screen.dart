@@ -358,11 +358,11 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
     final buttonLabel = running ? 'すれ違いを停止' : 'すれ違いを開始';
     final buttonIcon = running ? Icons.stop_circle : Icons.play_arrow_rounded;
     final statusText =
-        'スキャン: ${scanState.scanning ? '稼働中' : '停止中'} / '
+        '連続スキャン: ${scanState.scanning ? '稼働中' : '停止中'} / '
         'アドバタイズ: ${advState.advertising ? '稼働中 (${advState.localName.isNotEmpty ? advState.localName : 'ID未登録'})' : '停止中'}';
     final subText = running
         ? 'あなたのtempIDを発信しながら近くの学生を探しています。'
-        : 'ボタンを押すとスキャンと発信を同時にスタートします。';
+        : 'ボタンを押すと連続スキャンと発信を同時にスタートします。';
     final cardGradient = running
         ? _activeScanGradient
         : const LinearGradient(
@@ -752,7 +752,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  running ? 'スキャンモード稼働中' : '待機中',
+                                  running ? '連続スキャン稼働中' : '連続スキャン停止中',
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleLarge

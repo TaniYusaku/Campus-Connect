@@ -85,18 +85,30 @@ export class EncounterRepository implements IEncounterRepository {
     });
     const limitedUserIds = encounteredUserIds.slice(0, 30);
 
+    if (limitedUserIds.length === 0) {
+      return [];
+    }
+
     const usersCol = db.collection('users');
-    const userDocs = await usersCol.where('id', 'in', limitedUserIds).get();
+    const chunkSize = 10; // Firestore `in` queries are limited to 10 elements
+    const chunks: string[][] = [];
+    for (let i = 0; i < limitedUserIds.length; i += chunkSize) {
+      chunks.push(limitedUserIds.slice(i, i + chunkSize));
+    }
+
+    const snapshots = await Promise.all(chunks.map((chunk) => usersCol.where('id', 'in', chunk).get()));
 
     const usersMap = new Map<string, EncounteredUser>();
-    userDocs.forEach((doc) => {
-      const user = doc.data() as EncounteredUser;
-      if (!user.id) return;
-      const meta = metadata.get(user.id);
-      usersMap.set(user.id, {
-        ...user,
-        lastEncounteredAt: meta?.lastEncounteredAt,
-        encounterCount: meta?.count ?? user.encounterCount ?? 1,
+    snapshots.forEach((snapshot) => {
+      snapshot.forEach((doc) => {
+        const user = doc.data() as EncounteredUser;
+        if (!user.id) return;
+        const meta = metadata.get(user.id);
+        usersMap.set(user.id, {
+          ...user,
+          lastEncounteredAt: meta?.lastEncounteredAt,
+          encounterCount: meta?.count ?? user.encounterCount ?? 1,
+        });
       });
     });
 
