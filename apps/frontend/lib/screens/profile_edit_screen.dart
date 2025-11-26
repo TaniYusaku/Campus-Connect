@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/user.dart';
 import 'package:frontend/providers/api_provider.dart';
 import 'package:frontend/providers/profile_provider.dart';
+import 'package:frontend/providers/public_profile_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:http/http.dart' as http;
@@ -135,8 +136,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     setState(() => _saving = true);
     final api = ref.read(apiServiceProvider);
     final sns = <String, String>{};
-    if (_xCtl.text.trim().isNotEmpty) sns['x'] = _xCtl.text.trim();
-    if (_igCtl.text.trim().isNotEmpty) sns['instagram'] = _igCtl.text.trim();
+    final xHandle = _xCtl.text.trim();
+    final igHandle = _igCtl.text.trim();
+    if (xHandle.isNotEmpty) sns['x'] = xHandle;
+    if (igHandle.isNotEmpty) sns['instagram'] = igHandle;
     int? gradeInt;
     if (_selectedGradeStr != null && _selectedGradeStr != '未設定') {
       if (_selectedGradeStr == 'M1')
@@ -155,7 +158,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       faculty: _selectedFaculty == '未設定' ? null : _selectedFaculty,
       grade: gradeInt,
       bio: _bioCtl.text.trim(),
-      snsLinks: sns.isEmpty ? null : sns,
+      snsLinks: sns,
       gender:
           gender,
     );
@@ -166,6 +169,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         context,
       ).showSnackBar(const SnackBar(content: Text('プロフィールを更新しました')));
       ref.invalidate(profileProvider);
+      ref.invalidate(publicProfileProvider('me'));
       Navigator.of(context).pop(true);
     } else {
       ScaffoldMessenger.of(

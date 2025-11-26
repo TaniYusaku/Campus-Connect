@@ -112,8 +112,9 @@ Widget buildPublicProfileContent(
           const <MapEntry<String, String>>[];
   final bool hasSnsEntries = snsEntries.isNotEmpty;
   final bool isSelfView = onEditProfile != null;
-  final bool canShowToFriend = user.isFriend && hasSnsEntries;
-  final bool shouldShowSnsSection = isSelfView || canShowToFriend;
+  final bool showSnsEntries = hasSnsEntries && (isSelfView || user.isFriend);
+  final bool showSnsPlaceholder = isSelfView && !hasSnsEntries;
+  final bool shouldShowSnsSection = showSnsEntries || showSnsPlaceholder;
   final faculty = user.faculty ?? '学部未設定';
   final gradeLabel = _gradeLabel(user.grade);
   final genderLabel = user.gender ?? '未設定';
@@ -244,7 +245,7 @@ Widget buildPublicProfileContent(
             if (shouldShowSnsSection) ...[
               Text('SNS', style: bioTitleStyle),
               const SizedBox(height: 12),
-              if (hasSnsEntries)
+              if (showSnsEntries)
                 ...snsEntries.map(
                   (entry) => Card(
                     margin: const EdgeInsets.symmetric(vertical: 4),
@@ -254,8 +255,8 @@ Widget buildPublicProfileContent(
                       dense: true,
                     ),
                   ),
-                )
-              else
+                ),
+              if (showSnsPlaceholder)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),

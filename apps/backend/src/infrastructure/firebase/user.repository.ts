@@ -1,8 +1,9 @@
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import type { IUserRepository, UpdatableUserInfo } from '../../domain/repositories/user.repository.js';
 import type { User } from '../../domain/entities/user.entity.js';
 import axios from 'axios';
+import type { UpdateData } from 'firebase-admin/firestore';
 
 // IUserRepositoryインターフェースを実際にFirebaseを使って実装するクラス
 export class UserRepository implements IUserRepository {
@@ -92,10 +93,47 @@ export class UserRepository implements IUserRepository {
   async update(id: string, userInfo: UpdatableUserInfo): Promise<User> {
     const db = getFirestore();
     const userRef = db.collection('users').doc(id);
-    const updateData = {
-      ...userInfo,
+    const updateData: UpdateData<User> = {
       updatedAt: new Date(),
     };
+    if (userInfo.userName !== undefined) {
+      updateData.userName = userInfo.userName;
+    }
+    if (userInfo.faculty !== undefined) {
+      updateData.faculty = userInfo.faculty;
+    }
+    if (userInfo.grade !== undefined) {
+      updateData.grade = userInfo.grade;
+    }
+    if (userInfo.gender !== undefined) {
+      updateData.gender = userInfo.gender;
+    }
+    if (userInfo.profilePhotoUrl !== undefined) {
+      updateData.profilePhotoUrl = userInfo.profilePhotoUrl;
+    }
+    if (userInfo.bio !== undefined) {
+      updateData.bio = userInfo.bio;
+    }
+    if (userInfo.hobbies !== undefined) {
+      updateData.hobbies = userInfo.hobbies;
+    }
+    if (userInfo.snsLinks !== undefined) {
+      const sanitizedEntries = Object.entries(userInfo.snsLinks ?? {}).reduce<Record<string, string>>(
+        (acc, [key, value]) => {
+          const trimmed = value.trim();
+          if (trimmed.length > 0) {
+            acc[key] = trimmed;
+          }
+          return acc;
+        },
+        {},
+      );
+      if (Object.keys(sanitizedEntries).length === 0) {
+        updateData.snsLinks = FieldValue.delete();
+      } else {
+        updateData.snsLinks = sanitizedEntries;
+      }
+    }
     await userRef.update(updateData);
     const updatedDoc = await userRef.get();
     return updatedDoc.data() as User;

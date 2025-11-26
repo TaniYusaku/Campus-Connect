@@ -260,6 +260,11 @@ class _FriendCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final recentEncounter = _isRecentEncounter(user.lastEncounteredAt);
+    final snsEntries = user.snsLinks?.entries
+            .map((entry) => MapEntry(entry.key, entry.value.trim()))
+            .where((entry) => entry.value.isNotEmpty)
+            .toList() ??
+        const <MapEntry<String, String>>[];
     final accentColors = recentEncounter
         ? [
             AppColors.accentCrimson.withOpacity(0.12),
@@ -404,7 +409,7 @@ class _FriendCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (user.snsLinks != null && user.snsLinks!.isNotEmpty)
+                  if (snsEntries.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 18),
                       child: Column(
@@ -421,10 +426,7 @@ class _FriendCard extends StatelessWidget {
                           Wrap(
                             spacing: 10,
                             runSpacing: 10,
-                            children: user.snsLinks!.entries
-                                .where(
-                                  (entry) => entry.value.trim().isNotEmpty,
-                                )
+                            children: snsEntries
                                 .map(
                                   (entry) => _SocialChip(
                                     platform: entry.key,
