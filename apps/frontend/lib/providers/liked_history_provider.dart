@@ -8,6 +8,7 @@ class LikedEntry {
   final String username;
   final String? faculty;
   final int? grade;
+  final String? gender;
   final int likedAtMs;
 
   LikedEntry({
@@ -15,6 +16,7 @@ class LikedEntry {
     required this.username,
     this.faculty,
     this.grade,
+    this.gender,
     required this.likedAtMs,
   });
 
@@ -23,6 +25,7 @@ class LikedEntry {
     'username': username,
     'faculty': faculty,
     'grade': grade,
+    'gender': gender,
     'likedAtMs': likedAtMs,
   };
 
@@ -34,6 +37,7 @@ class LikedEntry {
         (json['grade'] is int)
             ? json['grade'] as int
             : int.tryParse('${json['grade'] ?? ''}'),
+    gender: json['gender'] as String?,
     likedAtMs: (json['likedAtMs'] as num).toInt(),
   );
 }
@@ -76,6 +80,7 @@ class LikedHistoryNotifier extends StateNotifier<List<LikedEntry>> {
       username: user.username,
       faculty: user.faculty,
       grade: user.grade,
+      gender: user.gender,
       likedAtMs: nowMs,
     );
     List<LikedEntry> next;

@@ -53,6 +53,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
   _GenderFilter _genderFilter = _GenderFilter.all;
   bool _sameFacultyOnly = false;
   bool _sameGradeOnly = false;
+  bool _filterExpanded = false;
 
   Future<void> _toggleScanAndAdvertise(bool running) async {
     if (_toggling) return;
@@ -171,6 +172,23 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
   List<User> _filterByGrade(List<User> users, User? me) {
     if (!_sameGradeOnly || me?.grade == null) return users;
     return users.where((u) => u.grade == me?.grade).toList();
+  }
+
+  String _buildFilterSummary() {
+    final genderLabel = switch (_genderFilter) {
+      _GenderFilter.all => 'すべて',
+      _GenderFilter.male => '男性',
+      _GenderFilter.female => '女性',
+    };
+    final conditions = <String>[];
+    if (_sameFacultyOnly) {
+      conditions.add('同じ学部だけ');
+    }
+    if (_sameGradeOnly) {
+      conditions.add('同じ学年だけ');
+    }
+    final conditionLabel = conditions.isEmpty ? 'なし' : conditions.join('・');
+    return '性別: $genderLabel / 条件: $conditionLabel';
   }
 
   Future<void> _restoreTabIndex() async {
@@ -357,12 +375,6 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
     final running = scanState.scanning || advState.advertising;
     final buttonLabel = running ? 'すれ違いを停止' : 'すれ違いを開始';
     final buttonIcon = running ? Icons.stop_circle : Icons.play_arrow_rounded;
-    final statusText =
-        '連続スキャン: ${scanState.scanning ? '稼働中' : '停止中'} / '
-        'アドバタイズ: ${advState.advertising ? '稼働中 (${advState.localName.isNotEmpty ? advState.localName : 'ID未登録'})' : '停止中'}';
-    final subText = running
-        ? 'あなたのtempIDを発信しながら近くの学生を探しています。'
-        : 'ボタンを押すと連続スキャンと発信を同時にスタートします。';
     final cardGradient = running
         ? _activeScanGradient
         : const LinearGradient(
@@ -423,37 +435,35 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
           final genderFiltered = _filterByGender(filtered);
           final facultyFiltered = _filterByFaculty(genderFiltered, myProfile);
           final gradeFiltered = _filterByGrade(facultyFiltered, myProfile);
+          if (gradeFiltered.isEmpty) {
+            return RefreshIndicator(
+              onRefresh: refreshEncounters,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
+                children: const [
+                  SizedBox(height: 160),
+                  Center(child: Text('この条件に当てはまる相手はいません。')),
+                ],
+              ),
+            );
+          }
           return RefreshIndicator(
             onRefresh: refreshEncounters,
             child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              itemCount: gradeFiltered.length + 1,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              itemCount: gradeFiltered.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
-                if (index == 0) {
-                  return _GenderFilterBar(
-                    selected: _genderFilter,
-                    hasResults: gradeFiltered.isNotEmpty,
-                    onSelected: (filter) {
-                      if (_genderFilter == filter) return;
-                      setState(() => _genderFilter = filter);
-                    },
-                    sameFacultyOnly: _sameFacultyOnly,
-                    sameGradeOnly: _sameGradeOnly,
-                    onChangedFaculty: (value) =>
-                        setState(() => _sameFacultyOnly = value),
-                    onChangedGrade:
-                        (value) => setState(() => _sameGradeOnly = value),
-                  );
-                }
-                final user = gradeFiltered[index - 1];
+                final user = gradeFiltered[index];
                 final isLiked = likedSet.contains(user.id);
                 final lastSeenText = _formatRelativeTime(user.lastEncounteredAt);
                 return Card(
+                  margin: EdgeInsets.zero,
                   child: ListTile(
                     contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     leading: CircleAvatar(
                       backgroundColor: AppColors.paleGold,
                       child: Text(
@@ -468,16 +478,16 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Wrap(
-                          spacing: 8,
+                          spacing: 6,
                           runSpacing: 4,
                           children: [
                             _InfoChip(label: user.faculty ?? '学部未設定'),
                             _InfoChip(label: '${user.grade}年'),
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           '最終すれ違い: $lastSeenText',
                           style: Theme.of(context)
@@ -616,18 +626,51 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
       );
     }
 
+    bool _matchesGenderFilter(String? gender) {
+      switch (_genderFilter) {
+        case _GenderFilter.all:
+          return true;
+        case _GenderFilter.male:
+          return gender == '男性';
+        case _GenderFilter.female:
+          return gender == '女性';
+      }
+    }
+
+    bool _matchesFacultyFilter(String? faculty) {
+      if (!_sameFacultyOnly) return true;
+      final myFaculty = myProfile?.faculty;
+      if (myFaculty == null) return false;
+      return faculty == myFaculty;
+    }
+
+    bool _matchesGradeFilter(int? grade) {
+      if (!_sameGradeOnly) return true;
+      final myGrade = myProfile?.grade;
+      if (myGrade == null) return false;
+      return grade == myGrade;
+    }
+
     Widget buildLikedTab() {
-      final filteredLikes = likedHistory
+      final availableLikes = likedHistory
           .where((entry) => !friendIds.contains(entry.userId))
           .toList();
+      final filteredLikes = availableLikes
+          .where((entry) => _matchesGenderFilter(entry.gender))
+          .where((entry) => _matchesFacultyFilter(entry.faculty))
+          .where((entry) => _matchesGradeFilter(entry.grade))
+          .toList();
       if (filteredLikes.isEmpty) {
+        final message = availableLikes.isEmpty
+            ? '最近いいねしたユーザーはいません'
+            : 'この条件に当てはまるいいね履歴はありません';
         return RefreshIndicator(
           onRefresh: refreshLikes,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            children: const [
-              SizedBox(height: 200),
-              Center(child: Text('最近いいねしたユーザーはいません')),
+            children: [
+              const SizedBox(height: 200),
+              Center(child: Text(message)),
             ],
           ),
         );
@@ -720,118 +763,128 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 320),
-                  curve: Curves.easeOut,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: cardGradient,
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 12,
-                        offset: Offset(0, 6),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeOut,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: cardGradient,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 12,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _ScanPulseIndicator(
+                          running: running,
+                          animation: _pulseAnimation,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            running ? 'スキャン中' : 'スキャン停止中',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed:
+                          _toggling ? null : () => _toggleScanAndAdvertise(running),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.primaryNavy,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: Icon(buttonIcon),
+                      label: Text(_toggling ? '処理中...' : buttonLabel),
+                    ),
+                    const SizedBox(height: 6),
+                    AnimatedOpacity(
+                      opacity: running ? 1 : 0.7,
+                      duration: const Duration(milliseconds: 200),
+                      child: Text(
+                        '検知範囲はおよそ5〜10mです。',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Colors.white70),
+                      ),
+                    ),
+                    if (advState.error != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '広告エラー: ${advState.error}',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Colors.red[100]),
                       ),
                     ],
-                  ),
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          _ScanPulseIndicator(
-                            running: running,
-                            animation: _pulseAnimation,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  running ? '連続スキャン稼働中' : '連続スキャン停止中',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleLarge
-                                      ?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  statusText,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(color: Colors.white70),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 320),
-                        child: Text(
-                          subText,
-                          key: ValueKey<bool>(running),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(color: Colors.white70),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      AnimatedOpacity(
-                        opacity: running ? 1 : 0.7,
-                        duration: const Duration(milliseconds: 200),
-                        child: Text(
-                          '検知範囲はおよそ5〜10mです。',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: Colors.white70),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      FilledButton.icon(
-                        onPressed:
-                            _toggling ? null : () => _toggleScanAndAdvertise(running),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppColors.primaryNavy,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        icon: Icon(buttonIcon),
-                        label: Text(_toggling ? '処理中...' : buttonLabel),
-                      ),
-                      const SizedBox(height: 12),
-                      if (advState.error != null)
-                        Text(
-                          '広告エラー: ${advState.error}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: Colors.red[100]),
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
+            ),
             TabBar(
               controller: _tabController,
               tabs: const [
                 Tab(text: 'すれ違い'),
                 Tab(text: 'いいね'),
               ],
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+              child: _FilterBar(
+                summary: _buildFilterSummary(),
+                expanded: _filterExpanded,
+                onTap: () => setState(() {
+                  _filterExpanded = !_filterExpanded;
+                }),
+              ),
+            ),
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 200),
+              sizeCurve: Curves.easeInOut,
+              firstChild: const SizedBox.shrink(),
+              secondChild: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: _EncounterFilterPanel(
+                  selectedGender: _genderFilter,
+                  onGenderSelected: (filter) {
+                    if (_genderFilter == filter) return;
+                    setState(() => _genderFilter = filter);
+                  },
+                  sameFacultyOnly: _sameFacultyOnly,
+                  sameGradeOnly: _sameGradeOnly,
+                  onChangedFaculty: (value) =>
+                      setState(() => _sameFacultyOnly = value),
+                  onChangedGrade:
+                      (value) => setState(() => _sameGradeOnly = value),
+                ),
+              ),
+              crossFadeState: _filterExpanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
             ),
             Expanded(
               child: TabBarView(
@@ -863,24 +916,105 @@ class _InfoChip extends StatelessWidget {
   }
 }
 
-class _GenderFilterBar extends StatelessWidget {
-  const _GenderFilterBar({
-    required this.selected,
-    required this.hasResults,
-    required this.onSelected,
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({
+    required this.summary,
+    required this.expanded,
+    required this.onTap,
+  });
+
+  final String summary;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final arrowIcon = expanded ? Icons.expand_less : Icons.expand_more;
+    return Material(
+      color: theme.cardColor,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              const Icon(Icons.filter_alt),
+              const SizedBox(width: 8),
+              Text(
+                '絞り込み',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  summary,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: AppColors.textSecondary),
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(arrowIcon),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EncounterFilterPanel extends StatelessWidget {
+  const _EncounterFilterPanel({
+    required this.selectedGender,
+    required this.onGenderSelected,
     required this.sameFacultyOnly,
     required this.sameGradeOnly,
     required this.onChangedFaculty,
     required this.onChangedGrade,
   });
 
-  final _GenderFilter selected;
-  final bool hasResults;
-  final ValueChanged<_GenderFilter> onSelected;
+  final _GenderFilter selectedGender;
+  final ValueChanged<_GenderFilter> onGenderSelected;
   final bool sameFacultyOnly;
   final bool sameGradeOnly;
   final ValueChanged<bool> onChangedFaculty;
   final ValueChanged<bool> onChangedGrade;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _GenderFilterSection(
+          selected: selectedGender,
+          onSelected: onGenderSelected,
+        ),
+        const SizedBox(height: 12),
+        _ConditionFilterSection(
+          sameFacultyOnly: sameFacultyOnly,
+          sameGradeOnly: sameGradeOnly,
+          onChangedFaculty: onChangedFaculty,
+          onChangedGrade: onChangedGrade,
+        ),
+      ],
+    );
+  }
+}
+
+class _GenderFilterSection extends StatelessWidget {
+  const _GenderFilterSection({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final _GenderFilter selected;
+  final ValueChanged<_GenderFilter> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -893,45 +1027,17 @@ class _GenderFilterBar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '表示したいリスト',
+          '性別で絞り込み',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Wrap(
           spacing: 8,
-          runSpacing: 8,
+          runSpacing: 6,
           children: chips,
         ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          children: [
-            FilterChip(
-              label: const Text('同じ学部だけ'),
-              selected: sameFacultyOnly,
-              onSelected: onChangedFaculty,
-            ),
-            FilterChip(
-              label: const Text('同じ学年だけ'),
-              selected: sameGradeOnly,
-              onSelected: onChangedGrade,
-            ),
-          ],
-        ),
-        if (!hasResults)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Text(
-              'この条件に当てはまる相手はいません。',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: AppColors.textSecondary),
-            ),
-          ),
       ],
     );
   }
@@ -946,6 +1052,52 @@ class _GenderFilterBar extends StatelessWidget {
       label: Text(label),
       selected: isSelected,
       onSelected: (_) => onSelected(filter),
+    );
+  }
+}
+
+class _ConditionFilterSection extends StatelessWidget {
+  const _ConditionFilterSection({
+    required this.sameFacultyOnly,
+    required this.sameGradeOnly,
+    required this.onChangedFaculty,
+    required this.onChangedGrade,
+  });
+
+  final bool sameFacultyOnly;
+  final bool sameGradeOnly;
+  final ValueChanged<bool> onChangedFaculty;
+  final ValueChanged<bool> onChangedGrade;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '条件で絞り込み',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            FilterChip(
+              label: const Text('同じ学部だけ'),
+              selected: sameFacultyOnly,
+              onSelected: onChangedFaculty,
+            ),
+            FilterChip(
+              label: const Text('同じ学年だけ'),
+              selected: sameGradeOnly,
+              onSelected: onChangedGrade,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

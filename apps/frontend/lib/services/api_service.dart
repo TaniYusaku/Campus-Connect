@@ -23,6 +23,7 @@ class ApiService {
     'API_BASE_URL',
     
     //192.168.111.145
+    //esencnts.kyoto-su.ac.jp
     defaultValue: 'http://esencnts.kyoto-su.ac.jp:3000/api',
   );
 

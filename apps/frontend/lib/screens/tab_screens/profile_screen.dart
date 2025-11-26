@@ -28,19 +28,15 @@ class ProfileScreen extends ConsumerWidget {
           return buildPublicProfileContent(
             context,
             user,
-            headerAction: FilledButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const Scaffold(
-                      body: SafeArea(child: ProfileEditScreen()),
-                    ),
+            onEditProfile: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const Scaffold(
+                    body: SafeArea(child: ProfileEditScreen()),
                   ),
-                );
-              },
-              icon: const Icon(Icons.edit),
-              label: const Text('プロフィールを編集'),
-            ),
+                ),
+              );
+            },
           );
         },
         loading: () => const _LoadingView(),
