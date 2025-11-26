@@ -24,6 +24,7 @@ class ApiService {
     
     //192.168.111.145
     //esencnts.kyoto-su.ac.jp
+    //https://almeta-kalendarial-denese.ngrok-free.dev
     defaultValue: 'http://esencnts.kyoto-su.ac.jp:3000/api',
   );
 
