@@ -125,7 +125,7 @@ SPEC CHECKSUMS:
   FirebaseCore: 311c48a147ad4a0ab7febbaed89e8025c67510cd
   FirebaseCoreExtension: 73af080c22a2f7b44cefa391dc08f7e4ee162cb5
   FirebaseCoreInternal: 56ea29f3dad2894f81b060f706f9d53509b6ed3b
-  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_blue_plus_darwin: 904ed52825285a15f60e9d90312337a09f11a785
   flutter_secure_storage: d33dac7ae2ea08509be337e775f6b59f1ff45f12
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
