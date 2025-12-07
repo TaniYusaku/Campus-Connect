@@ -12,13 +12,15 @@ final friendsFutureProvider = FutureProvider<List<User>>((ref) async {
 });
 
 class FriendsListScreen extends ConsumerWidget {
-  const FriendsListScreen({super.key});
+  const FriendsListScreen({super.key, this.showBack = false});
+
+  final bool showBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return  Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: showBack,
         title: const Text('友達'),
       ),
       body: _FriendsListView(

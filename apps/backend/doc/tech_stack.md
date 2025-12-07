@@ -13,34 +13,31 @@
 
 #### **2. 全体アーキテクチャ**
 
-本サービスのシステムは、クライアントアプリケーションとFirebaseプラットフォーム上のバックエンドサービス群で構成される。
+本サービスのシステムは、クライアントアプリケーションと Hono ベースのAPI（Firebase Admin連携）で構成される。
 
 * **クライアント (Client)**: Flutterで開発されたiOS/Androidアプリケーション。UI/UXの提供、BLEによる他ユーザーのスキャン、およびバックエンドAPIの呼び出しを担当する。
-* **バックエンド (Backend)**: GoogleのFirebaseプラットフォームを全面的に採用する。認証、データベース、サーバーサイドロジックなどの機能を提供する。
-* **連携 (Interaction)**: クライアントはFirebase SDKを介して、認証（Firebase Authentication）やデータベース（Firestore）と直接通信する。マッチング判定などの複雑なビジネスロジックは、クライアントからのリクエストをトリガーとして実行されるサーバーロジック（API）を介して処理される。
+* **バックエンド (Backend)**: Node.js + Hono で実装したREST API。Firebase Admin SDKを利用して Auth/Firestore/Storage を操作する。
+* **連携 (Interaction)**: クライアントは `/api/*` のRESTエンドポイント経由でやり取りする（Firebase SDK直接利用はしない）。マッチング判定などのビジネスロジックはサーバー側で処理する。
 
 #### **3. 使用技術スタック**
 
 | カテゴリ | 技術名 | 備考 |
 | :--- | :--- | :--- |
-| **PaaS** | Firebase | バックエンド機能全般の基盤。 |
+| **PaaS** | Firebase | Firestore / Storage / Auth のバックエンド基盤。 |
 | **データベース** | Cloud Firestore | ユーザー情報、すれ違いログ等の永続化。 |
-| **認証** | Firebase Authentication | ユーザーの識別と認証管理。 |
-| **サーバーロジック** | 未定（※） | ビジネスロジックを実行する環境。 |
-
-※ 現時点では具体的な実装方法は未定だが、Firebaseエコシステムとの親和性から **Cloud Functions** の利用が第一候補となる。
+| **認証** | Firebase Authentication | メール/パスワード認証（サーバー経由で実行）。 |
+| **サーバーロジック** | Node.js + Hono | `/api` 配下のRESTサーバー（Firebase Admin SDK利用）。 |
 
 #### **4. 認証方式**
 
 ##### **4.1. 認証フロー**
-MVP（Minimum Viable Product）リリースでは、ユーザー登録のハードルを下げるため **Firebase Anonymous Authentication（メールアドレス認証）** を採用する。
+MVP ではメール/パスワード認証を採用し、サーバーの `/api/auth/register` と `/api/auth/login` を経由して Firebase Authentication にユーザーを作成・サインインする。京都産業大学ドメイン（`*.kyoto-su.ac.jp`）のメールアドレスのみ受け付ける。
 
-1.  ユーザーがアプリを初回起動した際、クライアントは自動的にFirebaseのメールアドレス認証を実行する。
-2.  FirebaseはユニークなユーザーID（UID）を発行し、ユーザーはログイン状態となる。
-3.  このUIDは、Firestore上のユーザーデータと紐づけるための主キーとして使用される。
+1.  ユーザーが登録画面でメール・パスワード・ニックネーム等を入力し、`/api/auth/register` がユーザーを作成する。
+2.  登録後、`/api/auth/login` でサインインし、発行されたトークンをクライアントが保持する。
 
 ##### **4.2. 将来的な拡張**
-将来的に、メールアドレス認証アカウントを大学のメールアドレス等に紐づけて恒久的なアカウントにアップグレードする機能の追加を検討する。
+大学メールドメイン以外への対応や追加の本人確認フローは別途検討とする。
 
 #### **5. データベース設計（Firestoreデータモデル）**
 
@@ -123,13 +120,18 @@ Firestoreセキュリティルールを用いて、ユーザーが自身のデ�
 - `POST /api/users/:userId/like` いいね登録
 - `GET /api/users/friends` マッチ（友達）一覧
 - `GET /api/users/blocked` ブロック済みユーザー一覧
-- `POST /api/users/:userId/block` / `DELETE /api/users/:userId/block` ブロック/解除
+- `POST /api/auth/refresh` トークンリフレッシュ
+- `POST /api/encounters/observe` すれ違い観測イベント
+- `POST /api/encounters/register-tempid` tempId登録
+- `DELETE /api/users/:userId/like` いいね取り消し（マッチ前のみ）
+- `GET /api/users/likes/recent` 最近の「いいね」一覧
+- `GET /api/users/:userId` 公開プロフィール取得
+- `POST /api/users/:userId/block` ブロック（解除不可）
 
 未実装/要検討（要件との差分）
-- `DELETE /users/{userId}/like` いいね取り消し
-- ~~`PUT /users/me/device` デバイストークン登録~~ → アプリ内通知のみのため不要
-- `GET /users/{userId}` 他者プロフィール取得（公開情報のみ）
-- ページネーション（encounters/friends/blocked 一覧）
+- 一覧APIのページネーション（encounters/friends/blocked など）
+- Firestore TTLポリシーの導入（`recentEncounters.expiresAt` など）
+- 退会時にlikes/matches等の関連データをまとめて削除する仕組み
 ###### **5.2.6. `tempIds` コレクション**
 * **パス**: `tempIds/{tempId}`
 * **説明**: 端末が広告中の一時IDと、その所有ユーザー/有効期限を管理する。

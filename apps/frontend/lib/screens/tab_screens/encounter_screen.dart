@@ -320,7 +320,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                   Navigator.of(ctx).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const FriendsListScreen(),
+                      builder: (_) => const FriendsListScreen(showBack: true),
                     ),
                   );
                 },
