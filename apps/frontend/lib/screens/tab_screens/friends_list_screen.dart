@@ -64,6 +64,7 @@ class _FriendsListView extends ConsumerWidget {
                           builder: (_) => PublicProfileScreen(
                             userId: user.id,
                             initialUser: user,
+                            forceFriendView: true,
                           ),
                         ),
                       );
@@ -97,6 +98,24 @@ class _FriendsListView extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
+    final doubleConfirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('本当にブロックしますか？'),
+        content: const Text('ブロックは解除できません。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('ブロックする'),
+          ),
+        ],
+      ),
+    );
+    if (doubleConfirmed != true) return;
     final api = ref.read(apiServiceProvider);
     final ok = await api.blockUser(user.id);
     if (!context.mounted) return;
@@ -158,7 +177,7 @@ class _FriendsHeader extends StatelessWidget {
           Text(
             friendCount == 0
                 ? 'まだ友達はいません。まずはすれ違いタブでいいねしてみましょう！'
-                : '$friendCount 人の友達とマッチしました。再会したらお祝いしよう！',
+                : '$friendCount 人と友達になりました。再会したら話しかけてみましょう！',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: Colors.white.withOpacity(0.92),
               height: 1.4,
@@ -169,8 +188,10 @@ class _FriendsHeader extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: const [
-              _HeaderChip(icon: Icons.favorite, label: 'いいねは匿名'),
-              _HeaderChip(icon: Icons.chat_bubble_outline, label: 'SNSで連絡'),
+              _HeaderChip(icon: Icons.favorite, label: '友達とすれ違うと通知されます！'),
+              _HeaderChip(icon: Icons.chat_bubble_outline, label: 'SNSをのぞいてみましょう！'),
+              _HeaderChip(icon: Icons.lock, label: 'ブロック機能で安心安全に！'),
+            
             ],
           ),
         ],
@@ -643,7 +664,7 @@ class _SocialChip extends StatelessWidget {
     switch (key.toLowerCase()) {
       case 'x':
       case 'twitter':
-        return Icons.alternate_email;
+        return Icons.close;
       case 'instagram':
         return Icons.camera_alt_outlined;
       case 'line':

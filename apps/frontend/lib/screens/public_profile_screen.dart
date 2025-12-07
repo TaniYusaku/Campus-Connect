@@ -6,10 +6,16 @@ import 'package:frontend/shared/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class PublicProfileScreen extends ConsumerWidget {
-  const PublicProfileScreen({super.key, required this.userId, this.initialUser});
+  const PublicProfileScreen({
+    super.key,
+    required this.userId,
+    this.initialUser,
+    this.forceFriendView = false,
+  });
 
   final String userId;
   final User? initialUser;
+  final bool forceFriendView;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,6 +25,12 @@ class PublicProfileScreen extends ConsumerWidget {
       data: (value) => value ?? fallbackUser,
       orElse: () => fallbackUser,
     );
+
+    bool treatAsFriend(User? user) {
+      return forceFriendView ||
+          initialUser?.isFriend == true ||
+          user?.isFriend == true;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -30,17 +42,29 @@ class PublicProfileScreen extends ConsumerWidget {
           if (resolved == null) {
             return const Center(child: Text('ユーザー情報を取得できませんでした'));
           }
-          return buildPublicProfileContent(context, resolved);
+          return buildPublicProfileContent(
+            context,
+            resolved,
+            isFriendView: treatAsFriend(resolved),
+          );
         },
         loading: () {
           if (displayUser != null) {
-            return buildPublicProfileContent(context, displayUser);
+            return buildPublicProfileContent(
+              context,
+              displayUser,
+              isFriendView: treatAsFriend(displayUser),
+            );
           }
           return const Center(child: CircularProgressIndicator());
         },
         error: (error, stack) {
           if (displayUser != null) {
-            return buildPublicProfileContent(context, displayUser);
+            return buildPublicProfileContent(
+              context,
+              displayUser,
+              isFriendView: treatAsFriend(displayUser),
+            );
           }
           return Center(
             child: Padding(
@@ -73,7 +97,7 @@ Widget _snsIcon(String key) {
       return const Icon(Icons.camera_alt_outlined);
     case 'x':
     case 'twitter':
-      return const Icon(Icons.close_rounded);
+      return const Icon(Icons.close);
     default:
       return const Icon(Icons.link);
   }
@@ -103,6 +127,7 @@ Widget buildPublicProfileContent(
   BuildContext context,
   User user, {
   VoidCallback? onEditProfile,
+  bool isFriendView = false,
 }) {
   final List<MapEntry<String, String>> snsEntries =
       user.snsLinks?.entries
@@ -112,7 +137,8 @@ Widget buildPublicProfileContent(
           const <MapEntry<String, String>>[];
   final bool hasSnsEntries = snsEntries.isNotEmpty;
   final bool isSelfView = onEditProfile != null;
-  final bool showSnsEntries = hasSnsEntries && (isSelfView || user.isFriend);
+  final bool showSnsEntries =
+      hasSnsEntries && (isSelfView || isFriendView || user.isFriend);
   final bool showSnsPlaceholder = isSelfView && !hasSnsEntries;
   final bool shouldShowSnsSection = showSnsEntries || showSnsPlaceholder;
   final faculty = user.faculty ?? '学部未設定';
