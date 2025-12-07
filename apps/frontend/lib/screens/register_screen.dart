@@ -13,10 +13,13 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  static final _univEmailRegex =
+      RegExp(r'^[a-zA-Z0-9._%+-]+@(?:.*\.)?kyoto-su\.ac\.jp$');
   final _formKey = GlobalKey<FormState>();
   final _userNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
   String? _selectedFaculty = '未設定';
   String? _selectedGradeStr = '未設定';
   String? _selectedGender = '未設定';
@@ -129,16 +132,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'メールアドレス'),
+                decoration: const InputDecoration(
+                  labelText: '大学メールアドレス',
+                  hintText: 'xxx@***.kyoto-su.ac.jp',
+                ),
                 keyboardType: TextInputType.emailAddress,
-                validator:
-                    (value) =>
-                        value == null || value.isEmpty ? '入力してください' : null,
+                validator: (value) {
+                  final email = value?.trim() ?? '';
+                  if (email.isEmpty) {
+                    return '大学メールアドレスを入力してください';
+                  }
+                  if (!_univEmailRegex.hasMatch(email)) {
+                    return '大学メールアドレス(@...kyoto-su.ac.jp)のみ利用できます';
+                  }
+                  return null;
+                },
               ),
               TextFormField(
                 controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'パスワード'),
-                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'パスワード',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed:
+                        () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+                obscureText: _obscurePassword,
                 validator:
                     (value) =>
                         value == null || value.length < 6

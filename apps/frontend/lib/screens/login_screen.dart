@@ -12,8 +12,12 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  static final _univEmailRegex =
+      RegExp(r'^[a-zA-Z0-9._%+-]+@(?:.*\.)?kyoto-su\.ac\.jp$');
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
   bool _isLoading = false;
 
   @override
@@ -24,13 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
-    // ステップ1: 簡単な入力チェック
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('メールアドレスとパスワードを入力してください')));
-      return; // 何もせず処理を終了
-    }
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() {
       _isLoading = true;
@@ -64,33 +62,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       appBar: AppBar(title: const Text('ログイン')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'メールアドレス'),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'パスワード'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _login,
-              child:
-                  _isLoading
-                      ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Text('ログイン'),
-            ),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: '大学メールアドレス',
+                  hintText: 'xxx@***.kyoto-su.ac.jp',
+                ),
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  final email = value?.trim() ?? '';
+                  if (email.isEmpty) {
+                    return '大学メールアドレスを入力してください';
+                  }
+                  if (!_univEmailRegex.hasMatch(email)) {
+                    return '大学メールアドレス(@...kyoto-su.ac.jp)のみ利用できます';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordController,
+                decoration: InputDecoration(
+                  labelText: 'パスワード',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed:
+                        () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+                obscureText: _obscurePassword,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'パスワードを入力してください' : null,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _login,
+                child:
+                    _isLoading
+                        ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Text('ログイン'),
+              ),
+            ],
+          ),
         ),
       ),
     );
