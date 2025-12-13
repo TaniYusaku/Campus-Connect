@@ -10,5 +10,8 @@ export type User = {
   readonly profilePhotoUrl?: string;
   readonly bio?: string;
   readonly hobbies?: string[];
+  readonly place?: string;
+  readonly activity?: string;
+  readonly mbti?: string;
   readonly snsLinks?: { [key: string]: string };
 };

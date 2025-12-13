@@ -7,6 +7,8 @@ import 'package:frontend/screens/blocked_users_screen.dart';
 import 'package:frontend/screens/profile_edit_screen.dart';
 import 'package:frontend/screens/onboarding_screen.dart';
 import 'package:frontend/screens/announcements_screen.dart';
+import 'package:frontend/screens/privacy_policy_screen.dart';
+import 'package:frontend/screens/terms_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -76,17 +78,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _showTerms(String title) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => _SimpleTextPage(
-          title: title,
-          body: '準備中です。最新の利用規約／プライバシーポリシーは運営サイトをご確認ください。',
-        ),
-      ),
-    );
-  }
-
   Future<void> _showTutorial() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -133,12 +124,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.description_outlined),
             title: const Text('利用規約'),
-            onTap: _processing ? null : () => _showTerms('利用規約'),
+            onTap: _processing
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => TermsScreen(
+                          onAccepted: () {
+                            Navigator.of(context).pop();
+                          },
+                          showConsent: false,
+                        ),
+                      ),
+                    );
+                  },
           ),
           ListTile(
             leading: const Icon(Icons.privacy_tip_outlined),
             title: const Text('プライバシーポリシー'),
-            onTap: _processing ? null : () => _showTerms('プライバシーポリシー'),
+            onTap: _processing
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PrivacyPolicyScreen(),
+                      ),
+                    );
+                  },
           ),
           ListTile(
             leading: const Icon(Icons.campaign_outlined),
@@ -196,24 +208,6 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.titleMedium,
-      ),
-    );
-  }
-}
-
-class _SimpleTextPage extends StatelessWidget {
-  const _SimpleTextPage({required this.title, required this.body});
-
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(body),
       ),
     );
   }

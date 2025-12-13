@@ -5,6 +5,10 @@ class User {
   final String? faculty;
   final int? grade;
   final String? bio;
+  final List<String> hobbies;
+  final String? place;
+  final String? activity;
+  final String? mbti;
   final String? profilePhotoUrl;
   final Map<String, String>? snsLinks; // e.g. { 'x': 'id', 'instagram': 'id' }
   final String? gender;
@@ -19,6 +23,10 @@ class User {
     this.faculty,
     this.grade,
     this.bio,
+    this.hobbies = const [],
+    this.place,
+    this.activity,
+    this.mbti,
     this.profilePhotoUrl,
     this.snsLinks,
     this.gender,
@@ -45,6 +53,10 @@ class User {
             ? json['grade'] as int
             : int.tryParse('${json['grade'] ?? ''}'),
       bio: json['bio'] as String?,
+      hobbies: _parseStringList(json['hobbies']) ?? const [],
+      place: json['place'] as String?,
+      activity: json['activity'] as String?,
+      mbti: json['mbti'] as String?,
       profilePhotoUrl: json['profilePhotoUrl'] as String?,
       snsLinks: links,
       gender: json['gender'] as String?,
@@ -74,5 +86,16 @@ class User {
       if (parsed != null) return parsed;
     }
     return 1;
+  }
+
+  static List<String>? _parseStringList(dynamic value) {
+    if (value is List) {
+      return value
+          .map((e) => e?.toString() ?? '')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return null;
   }
 }

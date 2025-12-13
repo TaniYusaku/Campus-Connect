@@ -4,12 +4,12 @@ import 'providers/auth_provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/register_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'shared/app_theme.dart';
 import 'widgets/in_app_notification_host.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/terms_screen.dart';
+import 'screens/auth/auth_welcome_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ← Firebase前に必要
@@ -87,7 +87,7 @@ class _LaunchGateState extends State<LaunchGate> {
       case AuthState.authenticated:
         return const _HomeGate();
       case AuthState.unauthenticated:
-        return const RegisterScreen();
+        return const AuthWelcomeScreen();
       case AuthState.checking:
         return const Scaffold(
           body: Center(child: CircularProgressIndicator()),
@@ -97,10 +97,14 @@ class _LaunchGateState extends State<LaunchGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loadingPrefs) {
+    if (_loadingPrefs || widget.authState == AuthState.checking) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
+    }
+
+    if (widget.authState == AuthState.unauthenticated) {
+      return const AuthWelcomeScreen();
     }
 
     if (!_welcomeSeen) {
@@ -109,12 +113,6 @@ class _LaunchGateState extends State<LaunchGate> {
 
     if (!_termsAccepted) {
       return TermsScreen(onAccepted: _handleTermsAccepted);
-    }
-
-    if (widget.authState == AuthState.checking) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
     }
 
     return _buildAuthEntry();

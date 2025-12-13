@@ -24,5 +24,8 @@ export type UpdatableUserInfo = {
   profilePhotoUrl?: string;
   bio?: string;
   hobbies?: string[];
+  place?: string;
+  activity?: string;
+  mbti?: string;
   snsLinks?: { [key: string]: string };
 };

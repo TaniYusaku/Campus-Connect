@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/user.dart';
 import 'package:frontend/providers/public_profile_provider.dart';
 import 'package:frontend/shared/app_theme.dart';
+import 'package:frontend/shared/profile_constants.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class PublicProfileScreen extends ConsumerWidget {
@@ -146,33 +147,45 @@ Widget buildPublicProfileContent(
   final genderLabel = user.gender ?? '未設定';
   final bio = user.bio?.trim() ?? '';
   final hasBio = bio.isNotEmpty;
+  final hobbies = user.hobbies;
+  final place = user.place?.trim() ?? '';
+  final activity = user.activity?.trim() ?? '';
+  final mbti = user.mbti?.trim() ?? '';
+  final hasMbti = mbti.isNotEmpty && mbti != '選択しない';
+  final mbtiDisplay =
+      hasMbti ? (kMbtiLabels[mbti] != null ? '$mbti（${kMbtiLabels[mbti]}）' : mbti) : '';
+  final hasOptionalDetails =
+      hobbies.isNotEmpty || place.isNotEmpty || activity.isNotEmpty || hasMbti;
   final canEdit = onEditProfile != null;
 
   // Nunito styles bring a playful Tinder-like tone without paid fonts.
+  final scheme = Theme.of(context).colorScheme;
+  final onBackground = scheme.onBackground;
+  final onBackgroundMuted = onBackground.withOpacity(0.8);
   final bioTitleStyle = GoogleFonts.nunito(
     fontSize: 18,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
+    color: onBackground,
   );
   final bioBodyStyle = GoogleFonts.nunito(
     fontSize: 16,
     height: 1.5,
-    color: AppColors.textPrimary.withOpacity(0.9),
+    color: onBackground.withOpacity(0.9),
   );
   final placeholderStyle = bioBodyStyle.copyWith(
-    color: AppColors.textSecondary.withOpacity(0.8),
+    color: onBackgroundMuted,
   );
   final headerNameStyle = GoogleFonts.nunito(
     fontSize: 23,
     fontWeight: FontWeight.w700,
-    color: Colors.white,
+    color: scheme.onPrimary,
   );
   final headerMetaStyle = GoogleFonts.nunito(
     fontSize: 14,
-    color: Colors.white.withOpacity(0.85),
+    color: scheme.onPrimary.withOpacity(0.85),
   );
   final snsNoteStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: AppColors.textSecondary,
+        color: onBackgroundMuted,
       );
 
   return ListView(
@@ -255,19 +268,84 @@ Widget buildPublicProfileContent(
           children: [
             Text('自己紹介', style: bioTitleStyle),
             const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                hasBio ? bio : '自己紹介文を追加してみましょう。',
-                style: hasBio ? bioBodyStyle : placeholderStyle,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  hasBio ? bio : '自己紹介文を追加してみましょう。',
+                  style: hasBio ? bioBodyStyle : placeholderStyle,
               ),
             ),
             const SizedBox(height: 28),
+            if (hasOptionalDetails) ...[
+              Text('プロフィール詳細', style: bioTitleStyle),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (hobbies.isNotEmpty) ...[
+                      Text(
+                        '趣味',
+                        style: bioBodyStyle.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: hobbies
+                            .map((hobby) => Chip(
+                                  label: Text(hobby),
+                                  backgroundColor:
+                                      scheme.surfaceVariant.withOpacity(0.7),
+                                  labelStyle: TextStyle(color: onBackground),
+                                ))
+                            .toList(),
+                      ),
+                      if (place.isNotEmpty || activity.isNotEmpty || hasMbti)
+                        const SizedBox(height: 12),
+                    ],
+                    if (place.isNotEmpty) ...[
+                      Text(
+                        'よくいる場所',
+                        style: bioBodyStyle.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(place, style: bioBodyStyle),
+                      if (activity.isNotEmpty || hasMbti) const SizedBox(height: 12),
+                    ],
+                    if (activity.isNotEmpty) ...[
+                      Text(
+                        '活動',
+                        style: bioBodyStyle.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(activity, style: bioBodyStyle),
+                      if (hasMbti) const SizedBox(height: 12),
+                    ],
+                    if (hasMbti) ...[
+                      Text(
+                        'MBTI',
+                        style: bioBodyStyle.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(mbtiDisplay, style: bioBodyStyle),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+            ],
             if (shouldShowSnsSection) ...[
               Text('SNS', style: bioTitleStyle),
               const SizedBox(height: 12),
@@ -287,7 +365,7 @@ Widget buildPublicProfileContent(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: scheme.surface,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(

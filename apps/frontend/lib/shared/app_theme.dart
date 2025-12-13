@@ -117,10 +117,55 @@ class AppTheme {
 
   static ThemeData dark() {
     final base = ThemeData.dark(useMaterial3: true);
+    final scheme = base.colorScheme.copyWith(
+      primary: const Color(0xFFACC8FF),
+      secondary: const Color(0xFFD36A7B),
+      surface: const Color(0xFF1E1E24),
+      surfaceVariant: const Color(0xFF2A2A33),
+      background: const Color(0xFF16161C),
+      onBackground: Colors.white,
+      onSurface: Colors.white,
+      outline: Colors.white24,
+    );
     return base.copyWith(
-      colorScheme: base.colorScheme.copyWith(
-        primary: const Color(0xFFACC8FF),
-        secondary: const Color(0xFFD36A7B),
+      scaffoldBackgroundColor: scheme.background,
+      colorScheme: scheme,
+      appBarTheme: base.appBarTheme.copyWith(
+        backgroundColor: Colors.transparent,
+        foregroundColor: scheme.onBackground,
+        elevation: 0,
+        centerTitle: false,
+      ),
+      textTheme: base.textTheme.apply(
+        fontFamily: 'NotoSans',
+        bodyColor: scheme.onBackground,
+        displayColor: scheme.onBackground,
+      ),
+      dividerTheme: DividerThemeData(
+        color: scheme.outline,
+        thickness: 1,
+      ),
+      cardTheme: CardThemeData(
+        color: scheme.surface,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      chipTheme: base.chipTheme.copyWith(
+        backgroundColor: scheme.surfaceVariant,
+        selectedColor: scheme.primary.withOpacity(0.2),
+        labelStyle: TextStyle(color: scheme.onBackground),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: scheme.primary,
+          foregroundColor: Colors.black,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+        ),
       ),
     );
   }

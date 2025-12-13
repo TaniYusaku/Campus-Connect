@@ -34,6 +34,29 @@ const updateUserSchema = z.object({
   profilePhotoUrl: z.string().url().optional(),
   bio: z.string().optional(),
   hobbies: z.array(z.string()).optional(),
+  place: z.string().max(30).optional(),
+  activity: z.string().max(50).optional(),
+  mbti: z
+    .enum([
+      'ISTJ',
+      'ISFJ',
+      'INFJ',
+      'INTJ',
+      'ISTP',
+      'ISFP',
+      'INFP',
+      'INTP',
+      'ESTP',
+      'ESFP',
+      'ENFP',
+      'ENTP',
+      'ESTJ',
+      'ESFJ',
+      'ENFJ',
+      'ENTJ',
+    ])
+    .or(z.literal(''))
+    .optional(),
   snsLinks: z.record(z.string()).optional(),
   // 今後更新したい項目があればここに追加
 });

@@ -152,6 +152,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 controller: _passwordController,
                 decoration: InputDecoration(
                   labelText: 'パスワード',
+                  helperText: '大学のアドレスのパスワードとは別のものにしてください',
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword
@@ -163,11 +164,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 obscureText: _obscurePassword,
-                validator:
-                    (value) =>
-                        value == null || value.length < 6
-                            ? '6文字以上で入力してください'
-                            : null,
+                validator: (value) {
+                  final password = value ?? '';
+                  if (password.isEmpty) {
+                    return 'Campus Connect用のパスワードを入力してください（大学アカウントとは別のものにしてください）';
+                  }
+                  if (password.length < 6) {
+                    return 'Campus Connect用に6文字以上のパスワードを設定してください（大学アカウントとは別のものにしてください）';
+                  }
+                  return null;
+                },
               ),
               DropdownButtonFormField<String>(
                 value: _selectedFaculty,

@@ -117,6 +117,18 @@ export class UserRepository implements IUserRepository {
     if (userInfo.hobbies !== undefined) {
       updateData.hobbies = userInfo.hobbies;
     }
+    if (userInfo.place !== undefined) {
+      const trimmed = userInfo.place?.trim() ?? '';
+      updateData.place = trimmed.length === 0 ? FieldValue.delete() : trimmed;
+    }
+    if (userInfo.activity !== undefined) {
+      const trimmed = userInfo.activity?.trim() ?? '';
+      updateData.activity = trimmed.length === 0 ? FieldValue.delete() : trimmed;
+    }
+    if (userInfo.mbti !== undefined) {
+      const trimmed = userInfo.mbti?.trim() ?? '';
+      updateData.mbti = trimmed.length === 0 ? FieldValue.delete() : trimmed;
+    }
     if (userInfo.snsLinks !== undefined) {
       const sanitizedEntries = Object.entries(userInfo.snsLinks ?? {}).reduce<Record<string, string>>(
         (acc, [key, value]) => {

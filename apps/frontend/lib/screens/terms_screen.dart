@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 
 class TermsScreen extends StatefulWidget {
   final VoidCallback onAccepted;
+  final bool showConsent;
 
-  const TermsScreen({super.key, required this.onAccepted});
+  const TermsScreen({
+    super.key,
+    required this.onAccepted,
+    this.showConsent = true,
+  });
 
   @override
   State<TermsScreen> createState() => _TermsScreenState();
@@ -63,20 +68,22 @@ class _TermsScreenState extends State<TermsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              CheckboxListTile(
-                value: _isChecked,
-                onChanged: (value) =>
-                    setState(() => _isChecked = value ?? false),
-                contentPadding: EdgeInsets.zero,
-                title: const Text('利用規約とプライバシーポリシーに同意します'),
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: _isChecked ? widget.onAccepted : null,
-                child: const Text('同意して次へ'),
-              ),
+              if (widget.showConsent) ...[
+                const SizedBox(height: 16),
+                CheckboxListTile(
+                  value: _isChecked,
+                  onChanged: (value) =>
+                      setState(() => _isChecked = value ?? false),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('利用規約とプライバシーポリシーに同意します'),
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: _isChecked ? widget.onAccepted : null,
+                  child: const Text('同意して次へ'),
+                ),
+              ],
             ],
           ),
         ),

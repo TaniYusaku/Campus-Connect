@@ -20,11 +20,15 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtl = TextEditingController();
   final _bioCtl = TextEditingController();
+  final _hobbyCtl = TextEditingController();
+  final _placeCtl = TextEditingController();
+  final _activityCtl = TextEditingController();
   final _xCtl = TextEditingController();
   final _igCtl = TextEditingController();
   bool _initialized = false;
   bool _saving = false;
   bool _uploading = false;
+  List<String> _hobbies = [];
 
   // Options moved to shared/profile_constants.dart
 
@@ -33,6 +37,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   String? _selectedGradeStr; // '未設定','1'..,'M1','M2'
   String? _selectedGender;
   String? _selectedBioTemplate;
+  String _selectedMbti = '選択しない';
 
   Future<void> _pickAndUploadPhoto() async {
     final picker = ImagePicker();
@@ -96,6 +101,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   void dispose() {
     _nameCtl.dispose();
     _bioCtl.dispose();
+    _hobbyCtl.dispose();
+    _placeCtl.dispose();
+    _activityCtl.dispose();
     _xCtl.dispose();
     _igCtl.dispose();
     super.dispose();
@@ -122,6 +130,22 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       _selectedGradeStr = '未設定';
     }
     _bioCtl.text = u.bio ?? '';
+    _selectedBioTemplate =
+        (u.bio != null && kBioTemplates.contains(u.bio)) ? u.bio : null;
+    final normalizedHobbies = <String>{};
+    _hobbies = [];
+    for (final hobby in u.hobbies) {
+      final trimmed = hobby.trim();
+      if (trimmed.isEmpty) continue;
+      final key = trimmed.toLowerCase();
+      if (normalizedHobbies.add(key)) {
+        _hobbies.add(trimmed);
+      }
+    }
+    _placeCtl.text = u.place ?? '';
+    _activityCtl.text = u.activity ?? '';
+    _selectedMbti =
+        (u.mbti != null && kMbtiOptions.contains(u.mbti)) ? u.mbti! : '選択しない';
     _xCtl.text = u.snsLinks?['x'] ?? '';
     _igCtl.text = u.snsLinks?['instagram'] ?? '';
     _selectedGender =
@@ -129,6 +153,80 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             ? u.gender
             : '未設定';
     _initialized = true;
+  }
+
+  void _addHobby(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return;
+    if (trimmed.length > 20) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('趣味は20文字以内で入力してください')),
+      );
+      return;
+    }
+    if (_hobbies.length >= 7) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('趣味は最大7件までです')),
+      );
+      return;
+    }
+    final normalized = trimmed.toLowerCase();
+    final exists = _hobbies.any((h) => h.toLowerCase() == normalized);
+    if (exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('同じ趣味がすでに追加されています')),
+      );
+      return;
+    }
+    setState(() {
+      _hobbies = [..._hobbies, trimmed];
+    });
+    _hobbyCtl.clear();
+  }
+
+  void _removeHobby(String hobby) {
+    setState(() {
+      _hobbies = _hobbies.where((h) => h != hobby).toList();
+    });
+  }
+
+  String _mbtiDisplay(String code) {
+    final label = kMbtiLabels[code];
+    if (label == null || label.isEmpty) return code;
+    return '$code（$label）';
+  }
+
+  InputDecoration _buildDecoration(String label, {String? hint}) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final fill = scheme.surfaceVariant.withOpacity(
+      theme.brightness == Brightness.dark ? 0.35 : 0.8,
+    );
+    final borderColor = scheme.outline.withOpacity(0.5);
+    final radius = BorderRadius.circular(12);
+    final baseTextColor = scheme.onSurface.withOpacity(0.9);
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      filled: true,
+      fillColor: fill,
+      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      labelStyle: TextStyle(color: baseTextColor),
+      hintStyle: TextStyle(color: scheme.onSurface.withOpacity(0.65)),
+      floatingLabelStyle: TextStyle(color: scheme.primary),
+      border: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide(color: borderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide(color: borderColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide(color: scheme.primary, width: 1.4),
+      ),
+    );
   }
 
   Future<void> _save() async {
@@ -140,6 +238,11 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     final igHandle = _igCtl.text.trim();
     if (xHandle.isNotEmpty) sns['x'] = xHandle;
     if (igHandle.isNotEmpty) sns['instagram'] = igHandle;
+    final place = _placeCtl.text.trim();
+    final activity = _activityCtl.text.trim();
+    final mbti = (_selectedMbti.isEmpty || _selectedMbti == '選択しない')
+        ? ''
+        : _selectedMbti;
     int? gradeInt;
     if (_selectedGradeStr != null && _selectedGradeStr != '未設定') {
       if (_selectedGradeStr == 'M1')
@@ -158,6 +261,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       faculty: _selectedFaculty == '未設定' ? null : _selectedFaculty,
       grade: gradeInt,
       bio: _bioCtl.text.trim(),
+      hobbies: _hobbies,
+      place: place.isEmpty ? '' : place,
+      activity: activity.isEmpty ? '' : activity,
+      mbti: mbti,
       snsLinks: sns,
       gender:
           gender,
@@ -224,7 +331,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                      children: [
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -327,15 +434,16 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                         autovalidateMode: AutovalidateMode.onUserInteraction,
                         decoration: const InputDecoration(labelText: '性別 (必須)'),
                       ),
-                      DropdownButtonFormField<String>(
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String?>(
                         value: _selectedBioTemplate,
                         items: [
-                          const DropdownMenuItem<String>(
+                          const DropdownMenuItem<String?>(
                             value: null,
                             child: Text('テンプレートを選択しない'),
                           ),
                           ...kBioTemplates.map(
-                            (s) => DropdownMenuItem<String>(
+                            (s) => DropdownMenuItem<String?>(
                               value: s,
                               child: Text(s),
                             ),
@@ -354,8 +462,111 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _bioCtl,
-                        decoration: const InputDecoration(labelText: '自己紹介'),
+                        decoration: const InputDecoration(
+                          labelText: '自己紹介',
+                          hintText: '例：音楽が好きです。よく図書館で作業してます',
+                        ),
                         maxLines: 4,
+                        maxLength: 80,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '趣味（任意）',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _hobbyCtl,
+                              decoration: const InputDecoration(
+                                labelText: '趣味を追加',
+                                hintText: '例：カフェ巡り、散歩、映画鑑賞',
+                              ),
+                              maxLength: 20,
+                              onFieldSubmitted: _addHobby,
+                              textInputAction: TextInputAction.done,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed:
+                                (_hobbies.length >= 7)
+                                    ? null
+                                    : () => _addHobby(_hobbyCtl.text),
+                            icon: const Icon(Icons.add),
+                            tooltip: '趣味を追加',
+                          ),
+                        ],
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '20文字以内・最大7件。Enterでも追加できます。',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children:
+                            _hobbies.isEmpty
+                                ? [
+                                    Text(
+                                      '追加された趣味はありません',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ]
+                                : _hobbies
+                                    .map(
+                                      (hobby) => InputChip(
+                                        label: Text(hobby),
+                                        onDeleted: () => _removeHobby(hobby),
+                                      ),
+                                    )
+                                    .toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _placeCtl,
+                        decoration: const InputDecoration(
+                          labelText: 'よくいる場所（任意）',
+                          hintText: '例：図書館、学食、1号館',
+                        ),
+                        maxLength: 30,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _activityCtl,
+                        decoration: const InputDecoration(
+                          labelText: '活動（サークル・部活・バイトなど）',
+                          hintText: '例：テニスサークル、軽音部、居酒屋バイト',
+                        ),
+                        maxLength: 50,
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _selectedMbti,
+                        items:
+                            kMbtiOptions
+                                .map(
+                                  (s) => DropdownMenuItem<String>(
+                                    value: s,
+                                    child: Text(
+                                      s == '選択しない' ? s : _mbtiDisplay(s),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setState(() => _selectedMbti = v);
+                        },
+                        dropdownColor: Theme.of(context).colorScheme.surfaceVariant,
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                        decoration: _buildDecoration('MBTI（任意）'),
                       ),
                       const SizedBox(height: 12),
                       const Text('SNS(任意)'),

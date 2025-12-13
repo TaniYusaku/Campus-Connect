@@ -296,6 +296,10 @@ class ApiService {
     String? faculty,
     int? grade,
     String? bio,
+    List<String>? hobbies,
+    String? place,
+    String? activity,
+    String? mbti,
     Map<String, String>? snsLinks,
     String? profilePhotoUrl,
     String? gender,
@@ -305,6 +309,10 @@ class ApiService {
     if (faculty != null) payload['faculty'] = faculty;
     if (grade != null) payload['grade'] = grade;
     if (bio != null) payload['bio'] = bio;
+    if (hobbies != null) payload['hobbies'] = hobbies;
+    if (place != null) payload['place'] = place;
+    if (activity != null) payload['activity'] = activity;
+    if (mbti != null) payload['mbti'] = mbti;
     if (snsLinks != null) payload['snsLinks'] = snsLinks;
     if (profilePhotoUrl != null) payload['profilePhotoUrl'] = profilePhotoUrl;
     if (gender != null) payload['gender'] = gender;

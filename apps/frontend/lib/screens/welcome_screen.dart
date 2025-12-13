@@ -16,7 +16,7 @@ class WelcomeScreen extends StatelessWidget {
             children: [
               const Spacer(),
               Text(
-                'ようこそ\nCampus Connectへ',
+                'Campus Connect の準備',
                 style: theme.textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -24,8 +24,8 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                '同じキャンパスにいる仲間と、日常のすれ違いから'
-                'つながる体験をはじめましょう。',
+                '安全に楽しむために、アプリのご案内と利用規約への'
+                '同意をお願いします。',
                 style: theme.textTheme.bodyLarge,
                 textAlign: TextAlign.center,
               ),
