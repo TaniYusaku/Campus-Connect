@@ -463,7 +463,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       TextFormField(
                         controller: _bioCtl,
                         decoration: const InputDecoration(
-                          labelText: '自己紹介',
+                          labelText: '自己紹介(任意)',
                           hintText: '例：音楽が好きです。よく図書館で作業してます',
                         ),
                         maxLines: 4,
@@ -541,7 +541,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       TextFormField(
                         controller: _activityCtl,
                         decoration: const InputDecoration(
-                          labelText: '活動（サークル・部活・バイトなど）',
+                          labelText: '活動(任意)（サークル・部活・バイトなど）',
                           hintText: '例：テニスサークル、軽音部、居酒屋バイト',
                         ),
                         maxLength: 50,
