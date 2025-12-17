@@ -93,42 +93,16 @@ export class UserRepository implements IUserRepository {
   async update(id: string, userInfo: UpdatableUserInfo): Promise<User> {
     const db = getFirestore();
     const userRef = db.collection('users').doc(id);
-    const updateData: UpdateData<User> = {
-      updatedAt: new Date(),
-    };
-    if (userInfo.userName !== undefined) {
-      updateData.userName = userInfo.userName;
-    }
-    if (userInfo.faculty !== undefined) {
-      updateData.faculty = userInfo.faculty;
-    }
-    if (userInfo.grade !== undefined) {
-      updateData.grade = userInfo.grade;
-    }
-    if (userInfo.gender !== undefined) {
-      updateData.gender = userInfo.gender;
-    }
-    if (userInfo.profilePhotoUrl !== undefined) {
-      updateData.profilePhotoUrl = userInfo.profilePhotoUrl;
-    }
-    if (userInfo.bio !== undefined) {
-      updateData.bio = userInfo.bio;
-    }
-    if (userInfo.hobbies !== undefined) {
-      updateData.hobbies = userInfo.hobbies;
-    }
-    if (userInfo.place !== undefined) {
-      const trimmed = userInfo.place?.trim() ?? '';
-      updateData.place = trimmed.length === 0 ? FieldValue.delete() : trimmed;
-    }
-    if (userInfo.activity !== undefined) {
-      const trimmed = userInfo.activity?.trim() ?? '';
-      updateData.activity = trimmed.length === 0 ? FieldValue.delete() : trimmed;
-    }
-    if (userInfo.mbti !== undefined) {
-      const trimmed = userInfo.mbti?.trim() ?? '';
-      updateData.mbti = trimmed.length === 0 ? FieldValue.delete() : trimmed;
-    }
+    const trimmedPlace = userInfo.place !== undefined ? (userInfo.place?.trim() ?? '') : undefined;
+    const placeUpdate = trimmedPlace === undefined ? undefined : trimmedPlace.length === 0 ? FieldValue.delete() : trimmedPlace;
+
+    const trimmedActivity = userInfo.activity !== undefined ? (userInfo.activity?.trim() ?? '') : undefined;
+    const activityUpdate = trimmedActivity === undefined ? undefined : trimmedActivity.length === 0 ? FieldValue.delete() : trimmedActivity;
+
+    const trimmedMbti = userInfo.mbti !== undefined ? (userInfo.mbti?.trim() ?? '') : undefined;
+    const mbtiUpdate = trimmedMbti === undefined ? undefined : trimmedMbti.length === 0 ? FieldValue.delete() : trimmedMbti;
+
+    let snsLinksUpdate: UpdateData<User>['snsLinks'] | undefined;
     if (userInfo.snsLinks !== undefined) {
       const sanitizedEntries = Object.entries(userInfo.snsLinks ?? {}).reduce<Record<string, string>>(
         (acc, [key, value]) => {
@@ -140,12 +114,23 @@ export class UserRepository implements IUserRepository {
         },
         {},
       );
-      if (Object.keys(sanitizedEntries).length === 0) {
-        updateData.snsLinks = FieldValue.delete();
-      } else {
-        updateData.snsLinks = sanitizedEntries;
-      }
+      snsLinksUpdate = Object.keys(sanitizedEntries).length === 0 ? FieldValue.delete() : sanitizedEntries;
     }
+
+    const updateData: UpdateData<User> = {
+      updatedAt: new Date(),
+      ...(userInfo.userName !== undefined ? { userName: userInfo.userName } : {}),
+      ...(userInfo.faculty !== undefined ? { faculty: userInfo.faculty } : {}),
+      ...(userInfo.grade !== undefined ? { grade: userInfo.grade } : {}),
+      ...(userInfo.gender !== undefined ? { gender: userInfo.gender } : {}),
+      ...(userInfo.profilePhotoUrl !== undefined ? { profilePhotoUrl: userInfo.profilePhotoUrl } : {}),
+      ...(userInfo.bio !== undefined ? { bio: userInfo.bio } : {}),
+      ...(userInfo.hobbies !== undefined ? { hobbies: userInfo.hobbies } : {}),
+      ...(placeUpdate !== undefined ? { place: placeUpdate } : {}),
+      ...(activityUpdate !== undefined ? { activity: activityUpdate } : {}),
+      ...(mbtiUpdate !== undefined ? { mbti: mbtiUpdate } : {}),
+      ...(snsLinksUpdate !== undefined ? { snsLinks: snsLinksUpdate } : {}),
+    };
     await userRef.update(updateData);
     const updatedDoc = await userRef.get();
     return updatedDoc.data() as User;
