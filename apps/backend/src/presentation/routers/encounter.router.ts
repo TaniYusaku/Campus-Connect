@@ -51,7 +51,15 @@ encounterRouter.post(
         const [u1, u2] = [user.uid as string, encounteredUserId].sort();
         const doc = await db.collection('users').doc(u1).collection('recentEncounters').doc(u2).get();
         const count = doc.exists ? (doc.data() as { count?: number } | undefined)?.count : undefined;
-        await logWithUserDetails('encounters.csv', [nowJstString(), u1, u2, count ?? ''], [u1, u2], 'encounter:create');
+        await logWithUserDetails(
+          'encounters.csv',
+          [nowJstString(), u1, u2, count ?? ''],
+          [
+            { role: 'User1', userId: u1 },
+            { role: 'User2', userId: u2 },
+          ],
+          'encounter:create',
+        );
       } catch (err) {
         console.error('Failed to log encounter CSV (manual):', err);
       }
@@ -81,7 +89,10 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
       status,
       rssi,
       timestamp ?? '',
-    ], [user.uid, resolvedUserId].filter(Boolean), 'ble_observation');
+    ], [
+      { role: 'Reporter', userId: user.uid },
+      { role: 'Resolved', userId: resolvedUserId || undefined },
+    ], 'ble_observation');
   };
 
   // tempId -> userId を解決（期限切れは無効）
@@ -168,7 +179,15 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
         try {
           const doc = await db.collection('users').doc(u1).collection('recentEncounters').doc(u2).get();
           const count = doc.exists ? (doc.data() as { count?: number } | undefined)?.count : undefined;
-          await logWithUserDetails('encounters.csv', [nowJstString(), u1, u2, count ?? ''], [u1, u2], 'encounter:mutual');
+          await logWithUserDetails(
+            'encounters.csv',
+            [nowJstString(), u1, u2, count ?? ''],
+            [
+              { role: 'User1', userId: u1 },
+              { role: 'User2', userId: u2 },
+            ],
+            'encounter:mutual',
+          );
         } catch (logErr) {
           console.error('Failed to log encounter CSV (mutual observe):', logErr);
         }
@@ -211,7 +230,7 @@ encounterRouter.post('/register-tempid', zValidator('json', registerTempIdSchema
     await logWithUserDetails(
       'tempid_registrations.csv',
       [nowJstString(), uid, tempId, toJstString(new Date(expiresMs))],
-      [uid],
+      [{ role: 'User', userId: uid }],
       'tempid:register',
     );
     return c.json({ ok: true, expiresAt: toJstString(new Date(expiresMs)) });

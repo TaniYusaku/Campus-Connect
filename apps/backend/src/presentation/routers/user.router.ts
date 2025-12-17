@@ -131,24 +131,38 @@ userRouter.post('/:userId/like', async (c) => {
       }
     }
     const eventTimestamp = nowJstString();
-    await logWithUserDetails('user_events.csv', [
-      eventTimestamp,
-      likingUser.uid,
-      'SEND_LIKE',
-      likedUserId,
-      JSON.stringify({ matchCreated }),
-    ], [likingUser.uid, likedUserId], 'user_event:send_like');
+    await logWithUserDetails(
+      'user_events.csv',
+      [
+        eventTimestamp,
+        likingUser.uid,
+        'SEND_LIKE',
+        likedUserId,
+        JSON.stringify({ matchCreated }),
+      ],
+      [
+        { role: 'Actor', userId: likingUser.uid },
+        { role: 'Target', userId: likedUserId },
+      ],
+      'user_event:send_like',
+    );
     if (matchCreated) {
       await logWithUserDetails(
         'user_events.csv',
         [eventTimestamp, likingUser.uid, 'MATCHED', likedUserId, 'Trigger:Like'],
-        [likingUser.uid, likedUserId],
+        [
+          { role: 'Actor', userId: likingUser.uid },
+          { role: 'Target', userId: likedUserId },
+        ],
         'user_event:matched',
       );
       await logWithUserDetails(
         'user_events.csv',
         [eventTimestamp, likedUserId, 'MATCHED', likingUser.uid, 'Trigger:ReceivedLike'],
-        [likingUser.uid, likedUserId],
+        [
+          { role: 'Actor', userId: likedUserId },
+          { role: 'Target', userId: likingUser.uid },
+        ],
         'user_event:matched',
       );
     }
@@ -210,7 +224,7 @@ userRouter.get('/encounters', async (c) => {
   await logWithUserDetails(
     'user_events.csv',
     [nowJstString(), userId, 'ACTIVE', '', JSON.stringify({ path: '/encounters' })],
-    [userId],
+    [{ role: 'Actor', userId }],
     'user_event:active',
   );
   return c.json(safeUsers);
@@ -330,7 +344,10 @@ userRouter.get('/:userId', async (c) => {
       'VIEW_PROFILE',
       targetId,
       JSON.stringify({ isFriend }),
-    ], [viewerId, targetId], 'user_event:view_profile');
+    ], [
+      { role: 'Actor', userId: viewerId },
+      { role: 'Target', userId: targetId },
+    ], 'user_event:view_profile');
     return c.json(profileCopy);
   } catch (error) {
     console.error('Failed to fetch public profile:', error);

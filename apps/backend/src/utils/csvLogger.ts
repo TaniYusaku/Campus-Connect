@@ -6,13 +6,29 @@ import type { User } from '../domain/entities/user.entity.js';
 const LOG_DIR = join(process.cwd(), 'logs');
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
-const HEADERS: Record<string, string> = {
-  'ble_observations.csv':
-    'ServerTimestamp,ReporterUserId,ObservedTempId,ResolvedUserId,ResolutionStatus,RSSI,ClientTimestamp,UserDetailsJson',
-  'tempid_registrations.csv': 'RegisteredAt,UserId,TempId,ExpiresAt,UserDetailsJson',
-  'encounters.csv': 'Timestamp,User1Id,User2Id,EncounterCount,UserDetailsJson',
-  'user_events.csv': 'Timestamp,UserId,EventType,TargetId,Metadata,UserDetailsJson',
-  'users_master.csv': 'LoggedAt,Action,UserId,UserName,Email,Faculty,Grade,Gender,ProfilePhotoUrl,Bio,Hobbies,Place,Activity,Mbti,SnsLinks,CreatedAt,UpdatedAt',
+const BASE_HEADERS: Record<string, string[]> = {
+  'ble_observations.csv': ['ServerTimestamp', 'ReporterUserId', 'ObservedTempId', 'ResolvedUserId', 'ResolutionStatus', 'RSSI', 'ClientTimestamp'],
+  'tempid_registrations.csv': ['RegisteredAt', 'UserId', 'TempId', 'ExpiresAt'],
+  'encounters.csv': ['Timestamp', 'User1Id', 'User2Id', 'EncounterCount'],
+  'user_events.csv': ['Timestamp', 'UserId', 'EventType', 'TargetId', 'Metadata'],
+  'users_master.csv': ['LoggedAt', 'Action', 'UserId', 'UserName', 'Email', 'Faculty', 'Grade', 'Gender', 'ProfilePhotoUrl', 'Bio', 'Hobbies', 'Place', 'Activity', 'Mbti', 'SnsLinks', 'CreatedAt', 'UpdatedAt'],
+};
+
+const ROLE_COLUMNS: Record<string, string[]> = {
+  'ble_observations.csv': ['Reporter', 'Resolved'],
+  'tempid_registrations.csv': ['User'],
+  'encounters.csv': ['User1', 'User2'],
+  'user_events.csv': ['Actor', 'Target'],
+};
+
+const USER_DETAIL_FIELDS = ['UserName', 'Email', 'Faculty', 'Grade', 'Gender', 'ProfilePhotoUrl', 'Bio', 'Hobbies', 'Place', 'Activity', 'Mbti', 'SnsLinks', 'CreatedAt', 'UpdatedAt'];
+
+const buildHeader = (fileName: string): string | undefined => {
+  const base = BASE_HEADERS[fileName];
+  if (!base) return undefined;
+  const roles = ROLE_COLUMNS[fileName] ?? [];
+  const roleColumns = roles.flatMap((role) => USER_DETAIL_FIELDS.map((f) => `${role}${f}`));
+  return [...base, ...roleColumns].join(',');
 };
 
 export const toJstString = (date: Date): string => {
@@ -58,30 +74,36 @@ const formatHobbies = (hobbies: unknown): string => {
 
 const formatSnsLinks = (links: unknown): string => {
   if (!links || typeof links !== 'object') return '';
-  try {
-    return JSON.stringify(links);
-  } catch {
-    return '';
-  }
+  const entries = Object.entries(links).map(([k, v]) => `${k}=${String(v ?? '').trim()}`);
+  return entries.length > 0 ? entries.join('|') : '';
 };
 
-const pickUserDetails = (user: Partial<User> & { id: string }) => ({
-  id: user.id,
-  userName: user.userName ?? '',
-  email: user.email ?? '',
-  faculty: user.faculty ?? '',
-  grade: user.grade ?? '',
-  gender: user.gender ?? '',
-  profilePhotoUrl: user.profilePhotoUrl ?? '',
-  bio: user.bio ?? '',
-  hobbies: user.hobbies ?? [],
-  place: user.place ?? '',
-  activity: user.activity ?? '',
-  mbti: user.mbti ?? '',
-  snsLinks: user.snsLinks ?? {},
-  createdAt: toIsoString(user.createdAt),
-  updatedAt: toIsoString(user.updatedAt),
-});
+const toDetailColumns = (user?: Partial<User> & { id: string }): string[] => {
+  if (!user) {
+    return USER_DETAIL_FIELDS.map(() => '');
+  }
+  const snsLinks = (() => {
+    if (!user.snsLinks || typeof user.snsLinks !== 'object') return '';
+    const entries = Object.entries(user.snsLinks).map(([k, v]) => `${k}=${String(v ?? '').trim()}`);
+    return entries.length > 0 ? entries.join('|') : '';
+  })();
+  return [
+    user.userName ?? '',
+    user.email ?? '',
+    user.faculty ?? '',
+    user.grade ?? '',
+    user.gender ?? '',
+    user.profilePhotoUrl ?? '',
+    user.bio ?? '',
+    formatHobbies(user.hobbies),
+    user.place ?? '',
+    user.activity ?? '',
+    user.mbti ?? '',
+    snsLinks,
+    toIsoString(user.createdAt),
+    toIsoString(user.updatedAt),
+  ];
+};
 
 export const logToCsv = (fileName: string, columns: (string | number | undefined | null)[]): void => {
   try {
@@ -91,8 +113,9 @@ export const logToCsv = (fileName: string, columns: (string | number | undefined
 
     const filePath = join(LOG_DIR, fileName);
 
-    if (!existsSync(filePath) && HEADERS[fileName]) {
-      writeFileSync(filePath, HEADERS[fileName] + '\n', 'utf-8');
+    const header = buildHeader(fileName);
+    if (!existsSync(filePath) && header) {
+      writeFileSync(filePath, header + '\n', 'utf-8');
     }
 
     const line = columns
@@ -134,16 +157,26 @@ export const logUserSnapshot = (user: Partial<User> & { id: string }, action: st
   ]);
 };
 
-// 任意のCSVログを書き出したタイミングで、関連するユーザーのスナップショットも併記する
+type LogUserRole = { role: string; userId?: string | null };
+
+// 任意のCSVログを書き出したタイミングで、関与ユーザーを役割ごとにフラットな列で併記する
 export const logWithUserDetails = async (
   fileName: string,
   columns: (string | number | undefined | null)[],
-  userIds: string[] = [],
+  users: LogUserRole[] = [],
   action?: string,
 ): Promise<void> => {
-  const uniqueIds = Array.from(new Set(userIds)).filter((id) => !!id);
-  let userDetailsJson: string | undefined;
+  const roles = ROLE_COLUMNS[fileName] ?? [];
+  const roleToUserId = new Map<string, string>();
+  users.forEach(({ role, userId }) => {
+    if (role && userId) {
+      roleToUserId.set(role, userId);
+    }
+  });
+
+  const uniqueIds = Array.from(new Set(users.map((u) => u.userId).filter((id): id is string => !!id)));
   let fetchedSnapshots: { id: string; snap: any }[] | undefined;
+  let userMap: Map<string, Partial<User> & { id: string }> | undefined;
 
   if (uniqueIds.length > 0) {
     try {
@@ -157,56 +190,28 @@ export const logWithUserDetails = async (
             .then((snap) => ({ id, snap })),
         ),
       );
-      const details: Record<string, ReturnType<typeof pickUserDetails>> = {};
+      userMap = new Map<string, Partial<User> & { id: string }>();
       fetchedSnapshots.forEach(({ id, snap }) => {
         if (snap.exists) {
-          details[id] = pickUserDetails(snap.data() as User);
+          userMap?.set(id, { id, ...(snap.data() as User) });
         } else {
-          details[id] = pickUserDetails({ id });
+          userMap?.set(id, { id });
         }
       });
-      if (Object.keys(details).length > 0) {
-        userDetailsJson = JSON.stringify(details);
-      }
     } catch (err) {
       console.error(`[CSV Log Error] Failed to fetch user details for ${fileName}:`, err);
     }
   }
 
-  logToCsv(fileName, userDetailsJson ? [...columns, userDetailsJson] : columns);
+  const detailColumns = roles.flatMap((role) => {
+    const uid = roleToUserId.get(role);
+    const user = uid ? userMap?.get(uid) : undefined;
+    return toDetailColumns(user);
+  });
 
-  if (uniqueIds.length === 0) return;
-  const snapshotsForSnapshot = fetchedSnapshots;
-  if (snapshotsForSnapshot) {
-    snapshotsForSnapshot.forEach(({ id, snap }) => {
-      if (snap.exists) {
-        logUserSnapshot(snap.data() as User, action ?? fileName);
-      } else {
-        logUserSnapshot({ id }, action ?? fileName);
-      }
-    });
-  } else {
-    // 詳細取得に失敗した場合もスナップショットだけは試みる
-    try {
-      const db = getFirestore();
-      const snapshots = await Promise.all(
-        uniqueIds.map((id) =>
-          db
-            .collection('users')
-            .doc(id)
-            .get()
-            .then((snap) => ({ id, snap })),
-        ),
-      );
-      snapshots.forEach(({ id, snap }) => {
-        if (snap.exists) {
-          logUserSnapshot(snap.data() as User, action ?? fileName);
-        } else {
-          logUserSnapshot({ id }, action ?? fileName);
-        }
-      });
-    } catch (err) {
-      console.error(`[CSV Log Error] Failed to append user snapshots for ${fileName}:`, err);
-    }
+  logToCsv(fileName, [...columns, ...detailColumns]);
+
+  if (userMap && userMap.size > 0) {
+    userMap.forEach((data) => logUserSnapshot(data, action ?? fileName));
   }
 };
