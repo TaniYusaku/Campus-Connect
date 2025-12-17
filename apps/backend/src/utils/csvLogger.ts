@@ -4,7 +4,7 @@ import { join } from 'node:path';
 const LOG_DIR = join(process.cwd(), 'logs');
 
 const HEADERS: Record<string, string> = {
-  'ble_observations.csv': 'ServerTimestamp,ReporterUserId,ObservedTempId,RSSI,ClientTimestamp',
+  'ble_observations.csv': 'ServerTimestamp,ReporterUserId,ObservedTempId,ResolvedUserId,ResolutionStatus,RSSI,ClientTimestamp',
   'tempid_registrations.csv': 'RegisteredAt,UserId,TempId,ExpiresAt',
   'encounters.csv': 'Timestamp,User1Id,User2Id,EncounterCount',
   'user_events.csv': 'Timestamp,UserId,EventType,TargetId,Metadata',

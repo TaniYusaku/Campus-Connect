@@ -70,24 +70,41 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
   const { observedId, rssi, timestamp } = c.req.valid('json');
   const db = getFirestore();
   const now = Timestamp.now();
-  logToCsv('ble_observations.csv', [new Date().toISOString(), user.uid, observedId, rssi, timestamp ?? '']);
+  const serverTimestamp = new Date().toISOString();
+  let resolvedUserId = '';
+  const logObservation = (status: string) => {
+    logToCsv('ble_observations.csv', [
+      serverTimestamp,
+      user.uid,
+      observedId,
+      resolvedUserId,
+      status,
+      rssi,
+      timestamp ?? '',
+    ]);
+  };
 
   // tempId -> userId を解決（期限切れは無効）
   console.log('observe recv', { reporter: user.uid, observedId, rssi, timestamp });
   const tempDoc = await db.collection('tempIds').doc(observedId).get();
   if (!tempDoc.exists) {
     console.log('observe unresolved: no tempId doc');
+    logObservation('not_found');
     return c.json({ ok: true, resolved: false }, 202);
   }
   const tdata = tempDoc.data() as { userId: string; expiresAt?: FirebaseFirestore.Timestamp } | undefined;
   if (!tdata || !tdata.expiresAt || tdata.expiresAt.toMillis() <= now.toMillis()) {
     console.log('observe unresolved: expired or missing', tdata);
+    resolvedUserId = tdata?.userId ?? '';
+    logObservation('expired');
     return c.json({ ok: true, resolved: false }, 202);
   }
 
   const otherId = tdata.userId;
   const me = user.uid as string;
+  resolvedUserId = otherId;
   if (otherId === me) {
+    logObservation('self');
     return c.json({ ok: true, resolved: true, self: true }, 200);
   }
 
@@ -147,6 +164,7 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
       try {
         console.log('observe mutual: creating encounter', { u1, u2 });
         const matchCreated = await encounterRepository.create(u1, u2);
+        logObservation('mutual_created');
         try {
           const doc = await db.collection('users').doc(u1).collection('recentEncounters').doc(u2).get();
           const count = doc.exists ? (doc.data() as { count?: number } | undefined)?.count : undefined;
@@ -157,10 +175,12 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
         return c.json({ ok: true, resolved: true, mutual: true, matchCreated }, 201);
       } catch (e) {
         console.error('observe mutual create failed', e);
+        logObservation('mutual_error');
         return c.json({ error: 'Failed to record mutual encounter' }, 500);
       }
     }
   }
+  logObservation('resolved_only');
 
   return c.json({ ok: true, resolved: true, mutual: false }, 202);
 });

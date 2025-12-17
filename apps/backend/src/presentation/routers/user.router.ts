@@ -130,13 +130,18 @@ userRouter.post('/:userId/like', async (c) => {
         matchCreated = true;
       }
     }
+    const eventTimestamp = new Date().toISOString();
     logToCsv('user_events.csv', [
-      new Date().toISOString(),
+      eventTimestamp,
       likingUser.uid,
       'SEND_LIKE',
       likedUserId,
       JSON.stringify({ matchCreated }),
     ]);
+    if (matchCreated) {
+      logToCsv('user_events.csv', [eventTimestamp, likingUser.uid, 'MATCHED', likedUserId, 'Trigger:Like']);
+      logToCsv('user_events.csv', [eventTimestamp, likedUserId, 'MATCHED', likingUser.uid, 'Trigger:ReceivedLike']);
+    }
     return c.json({ message: 'Successfully liked user.', matchCreated }, 201);
   } catch (error) {
     console.error('Failed to like user:', error);
