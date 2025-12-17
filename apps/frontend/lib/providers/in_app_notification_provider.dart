@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 
 enum NotificationCategory {
   repeatEncounter,
@@ -50,6 +52,19 @@ class InAppNotificationNotifier extends StateNotifier<List<InAppNotification>> {
 
   final NotificationHistoryNotifier _historyNotifier;
 
+  Future<void> _vibrate() async {
+    try {
+      final canVibrate = await Vibration.hasVibrator() ?? false;
+      if (canVibrate) {
+        await Vibration.vibrate(duration: 500);
+      } else {
+        await HapticFeedback.vibrate();
+      }
+    } catch (_) {
+      await HapticFeedback.mediumImpact();
+    }
+  }
+
   void show({
     required String title,
     required String message,
@@ -67,6 +82,7 @@ class InAppNotificationNotifier extends StateNotifier<List<InAppNotification>> {
     );
     state = [...state, notification];
     _historyNotifier.add(notification);
+    unawaited(_vibrate());
     unawaited(Future.delayed(duration, () {
       dismiss(notification.id);
     }));

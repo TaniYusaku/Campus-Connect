@@ -6,6 +6,7 @@ import FlutterMacOS
 import Foundation
 
 import ble_peripheral
+import device_info_plus
 import file_selector_macos
 import firebase_auth
 import firebase_core
@@ -15,6 +16,7 @@ import path_provider_foundation
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   BlePeripheralPlugin.register(with: registry.registrar(forPlugin: "BlePeripheralPlugin"))
+  DeviceInfoPlusMacosPlugin.register(with: registry.registrar(forPlugin: "DeviceInfoPlusMacosPlugin"))
   FileSelectorPlugin.register(with: registry.registrar(forPlugin: "FileSelectorPlugin"))
   FLTFirebaseAuthPlugin.register(with: registry.registrar(forPlugin: "FLTFirebaseAuthPlugin"))
   FLTFirebaseCorePlugin.register(with: registry.registrar(forPlugin: "FLTFirebaseCorePlugin"))
