@@ -115,7 +115,8 @@ export const logToCsv = (fileName: string, columns: (string | number | undefined
 
     const header = buildHeader(fileName);
     if (!existsSync(filePath) && header) {
-      writeFileSync(filePath, header + '\n', 'utf-8');
+      // Excelが区切り文字を正しく認識するように先頭に `sep=,` を付与
+      writeFileSync(filePath, `sep=,\n${header}\n`, 'utf-8');
     }
 
     const line = columns
