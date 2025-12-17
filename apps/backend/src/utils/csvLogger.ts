@@ -16,8 +16,16 @@ const HEADERS: Record<string, string> = {
 };
 
 export const toJstString = (date: Date): string => {
+  // Excelで扱いやすい形式: YYYY-MM-DD HH:MM:SS（JST）
   const shifted = new Date(date.getTime() + JST_OFFSET_MS);
-  return shifted.toISOString().replace('Z', '+09:00');
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const year = shifted.getUTCFullYear();
+  const month = pad(shifted.getUTCMonth() + 1);
+  const day = pad(shifted.getUTCDate());
+  const hour = pad(shifted.getUTCHours());
+  const minute = pad(shifted.getUTCMinutes());
+  const second = pad(shifted.getUTCSeconds());
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 };
 
 export const nowJstString = (): string => toJstString(new Date());
