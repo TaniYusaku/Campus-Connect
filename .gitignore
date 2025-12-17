@@ -12,3 +12,4 @@
 firebase.json
 database-debug.log 
 apps/backend/serviceAccountKey.json
+logs/
