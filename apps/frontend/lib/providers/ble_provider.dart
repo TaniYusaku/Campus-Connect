@@ -45,8 +45,8 @@ final ccFilterProvider = StateNotifierProvider<BoolPrefNotifier, bool>((ref) {
   return n;
 });
 
-// RSSI しきい値（デフォルト -80dBm）
-// RSSI しきい値（デフォルト -80dBm）を端末に保存して維持
+// RSSI しきい値（デフォルト -85dBm）
+// RSSI しきい値（デフォルト -85dBm）を端末に保存して維持
 final rssiThresholdProvider = StateNotifierProvider<RssiThresholdNotifier, int>(
   (ref) {
     final notifier = RssiThresholdNotifier();
@@ -56,7 +56,7 @@ final rssiThresholdProvider = StateNotifierProvider<RssiThresholdNotifier, int>(
 );
 
 class RssiThresholdNotifier extends StateNotifier<int> {
-  RssiThresholdNotifier() : super(-80);
+  RssiThresholdNotifier() : super(-85);
   static const _key = 'rssi_threshold';
   final _storage = const FlutterSecureStorage();
 

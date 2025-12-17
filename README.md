@@ -30,7 +30,7 @@ API Endpoints (MVP)
 - `POST /api/users/:userId/block`（解除不可。ブロックすると互いの友達・すれ違いリストから除外）
 
 BLE (v0) Overview
-- Scan (foreground): `flutter_blue_plus`. In-app filter by Local Name prefix `CC-` or Campus Connect service UUID. RSSI threshold adjustable in UI (default -80 dBm).
+- Scan (foreground): `flutter_blue_plus`. In-app filter by Local Name prefix `CC-` or Campus Connect service UUID. RSSI threshold is currently fixed at -85 dBm (no in-app control yet).
 - Advertise (foreground): `ble_peripheral`. Local Name `CC-<tempId>` and minimal GATT service with a read-only characteristic holding the current tempId.
 - TempId rotation: every 15 minutes. TempId is persisted locally and registered to the backend with ~16 min expiry.
 - Observation upload: on encountering a CC device above the threshold, client sends `POST /api/encounters/observe` (rate-limited per tempId).

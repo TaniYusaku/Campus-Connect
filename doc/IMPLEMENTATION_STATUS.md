@@ -33,7 +33,7 @@ This document summarizes the current implementation versus the documented requir
 - Encountersタブ：`/api/users/encounters` を表示し、いいね／取り消し／ブロック操作に対応。さらに「すべて/男性/女性」のタブと「同じ学部だけ」「同じ学年だけ」のフィルタを実装
 - Friendsタブ：マッチ済みユーザー一覧表示、プロフィールモーダル表示、ブロック操作
 - Profileタブ：プロフィール編集（写真アップロード、自己紹介、学部・学年、SNSリンクなど）
-- BLE Scan画面：フォアグラウンドスキャン、RSSIしきい値調整、Campus Connectフィルタ切り替え
+- BLE Scan画面：フォアグラウンドスキャン、Campus Connectフィルタ切り替え（RSSIしきい値のUI調整は未実装）
 - BLE Advertise：15分ごとのtempIdローテーションとバックエンド登録
 - `ApiService` 内でのトークンリフレッシュ（期限前更新＋401リトライ）
 - 設定画面：通知トグル、ブロック一覧、ログアウト／退会導線

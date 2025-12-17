@@ -4,6 +4,7 @@ import type { IUserRepository, UpdatableUserInfo } from '../../domain/repositori
 import type { User } from '../../domain/entities/user.entity.js';
 import axios from 'axios';
 import type { UpdateData } from 'firebase-admin/firestore';
+import { logUserSnapshot } from '../../utils/csvLogger.js';
 
 // IUserRepositoryインターフェースを実際にFirebaseを使って実装するクラス
 export class UserRepository implements IUserRepository {
@@ -30,6 +31,7 @@ export class UserRepository implements IUserRepository {
     };
 
     await db.collection('users').doc(userRecord.uid).set(newUser);
+    logUserSnapshot(newUser, 'create');
     return newUser;
   }
 
@@ -133,14 +135,27 @@ export class UserRepository implements IUserRepository {
     };
     await userRef.update(updateData);
     const updatedDoc = await userRef.get();
-    return updatedDoc.data() as User;
+    const updatedUser = updatedDoc.data() as User;
+    logUserSnapshot(updatedUser, 'update');
+    return updatedUser;
   }
 
   async delete(id: string): Promise<void> {
     const db = getFirestore();
     const auth = getAuth();
-    await db.collection('users').doc(id).delete();
+    const userRef = db.collection('users').doc(id);
+    let existingUser: User | undefined;
+    try {
+      const snap = await userRef.get();
+      if (snap.exists) {
+        existingUser = snap.data() as User;
+      }
+    } catch {
+      // ignore read errors for logging
+    }
+    await userRef.delete();
     await auth.deleteUser(id);
+    logUserSnapshot(existingUser ?? { id }, 'delete');
   }
 
   async findByIds(userIds: string[]): Promise<User[]> {

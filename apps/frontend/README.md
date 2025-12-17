@@ -24,7 +24,7 @@ Config
 Screens
 - Register/Login: email/password flow hitting `/api/auth/*`.
 - Home tabs: Encounters, Friends, Profile (friends/profile are placeholders for now).
-- BLE Scan screen: toggle continuous scan, CC-only filter, RSSI threshold, and start/stop advertising.
+- BLE Scan screen: toggle continuous scan, CC-only filter, and start/stop advertising (RSSI threshold is fixed in code at -85 dBm; no UI control yet).
 
 BLE (v0) implemented
 - Scan: Foreground-only, with in-app filter by Local Name prefix `CC-` or service UUID.
