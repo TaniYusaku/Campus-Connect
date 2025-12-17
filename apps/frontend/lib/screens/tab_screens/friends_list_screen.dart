@@ -351,11 +351,6 @@ class _FriendCard extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                if (recentEncounter)
-                                  const _HighlightBadge(
-                                    label: '最近再会！',
-                                    icon: Icons.auto_awesome,
-                                  ),
                               ],
                             ),
                             const SizedBox(height: 6),
@@ -560,39 +555,6 @@ class _FriendAvatar extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _HighlightBadge extends StatelessWidget {
-  const _HighlightBadge({required this.label, required this.icon});
-
-  final String label;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: AppColors.softGold.withOpacity(0.75),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: AppColors.primaryNavy),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryNavy,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
