@@ -4,6 +4,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import type { User } from '../domain/entities/user.entity.js';
 
 const LOG_DIR = join(process.cwd(), 'logs');
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 const HEADERS: Record<string, string> = {
   'ble_observations.csv':
@@ -14,18 +15,29 @@ const HEADERS: Record<string, string> = {
   'users_master.csv': 'LoggedAt,Action,UserId,UserName,Email,Faculty,Grade,Gender,ProfilePhotoUrl,Bio,Hobbies,Place,Activity,Mbti,SnsLinks,CreatedAt,UpdatedAt',
 };
 
+export const toJstString = (date: Date): string => {
+  const shifted = new Date(date.getTime() + JST_OFFSET_MS);
+  return shifted.toISOString().replace('Z', '+09:00');
+};
+
+export const nowJstString = (): string => toJstString(new Date());
+
 const toIsoString = (value: unknown): string => {
   if (!value) return '';
-  if (value instanceof Date) return value.toISOString();
-  const ts = value as { toDate?: () => Date };
-  if (typeof ts?.toDate === 'function') {
-    try {
-      return ts.toDate().toISOString();
-    } catch {
-      return '';
+  let date: Date | null = null;
+  if (value instanceof Date) {
+    date = value;
+  } else {
+    const ts = value as { toDate?: () => Date };
+    if (typeof ts?.toDate === 'function') {
+      try {
+        date = ts.toDate();
+      } catch {
+        date = null;
+      }
     }
   }
-  return '';
+  return date ? toJstString(date) : '';
 };
 
 const formatHobbies = (hobbies: unknown): string => {
@@ -94,7 +106,7 @@ export const logToCsv = (fileName: string, columns: (string | number | undefined
 
 export const logUserSnapshot = (user: Partial<User> & { id: string }, action: string = 'snapshot'): void => {
   logToCsv('users_master.csv', [
-    new Date().toISOString(),
+    nowJstString(),
     action,
     user.id,
     user.userName ?? '',

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { EncounterRepository } from '../../infrastructure/firebase/encounter.repository.js';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { logWithUserDetails } from '../../utils/csvLogger.js';
+import { logWithUserDetails, nowJstString, toJstString } from '../../utils/csvLogger.js';
 
 const encounterSchema = z.object({
   encounteredUserId: z.string().min(1),
@@ -51,7 +51,7 @@ encounterRouter.post(
         const [u1, u2] = [user.uid as string, encounteredUserId].sort();
         const doc = await db.collection('users').doc(u1).collection('recentEncounters').doc(u2).get();
         const count = doc.exists ? (doc.data() as { count?: number } | undefined)?.count : undefined;
-        await logWithUserDetails('encounters.csv', [new Date().toISOString(), u1, u2, count ?? ''], [u1, u2], 'encounter:create');
+        await logWithUserDetails('encounters.csv', [nowJstString(), u1, u2, count ?? ''], [u1, u2], 'encounter:create');
       } catch (err) {
         console.error('Failed to log encounter CSV (manual):', err);
       }
@@ -70,7 +70,7 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
   const { observedId, rssi, timestamp } = c.req.valid('json');
   const db = getFirestore();
   const now = Timestamp.now();
-  const serverTimestamp = new Date().toISOString();
+  const serverTimestamp = nowJstString();
   let resolvedUserId = '';
   const logObservation = async (status: string) => {
     await logWithUserDetails('ble_observations.csv', [
@@ -168,7 +168,7 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
         try {
           const doc = await db.collection('users').doc(u1).collection('recentEncounters').doc(u2).get();
           const count = doc.exists ? (doc.data() as { count?: number } | undefined)?.count : undefined;
-          await logWithUserDetails('encounters.csv', [new Date().toISOString(), u1, u2, count ?? ''], [u1, u2], 'encounter:mutual');
+          await logWithUserDetails('encounters.csv', [nowJstString(), u1, u2, count ?? ''], [u1, u2], 'encounter:mutual');
         } catch (logErr) {
           console.error('Failed to log encounter CSV (mutual observe):', logErr);
         }
@@ -210,11 +210,11 @@ encounterRouter.post('/register-tempid', zValidator('json', registerTempIdSchema
     console.log('register-tempid stored', { uid, tempId });
     await logWithUserDetails(
       'tempid_registrations.csv',
-      [new Date().toISOString(), uid, tempId, new Date(expiresMs).toISOString()],
+      [nowJstString(), uid, tempId, toJstString(new Date(expiresMs))],
       [uid],
       'tempid:register',
     );
-    return c.json({ ok: true, expiresAt: new Date(expiresMs).toISOString() });
+    return c.json({ ok: true, expiresAt: toJstString(new Date(expiresMs)) });
   } catch (err) {
     console.error('register-tempid error', { uid, tempId, err });
     throw err;

@@ -15,7 +15,7 @@ import type { EncounteredUser } from '../../domain/entities/encounter.entity.js'
 import type { User } from '../../domain/entities/user.entity.js';
 // (deduped) ILikeRepository/LikeRepository imports are above
 import { getStorage } from 'firebase-admin/storage';
-import { logWithUserDetails } from '../../utils/csvLogger.js';
+import { logWithUserDetails, nowJstString, toJstString } from '../../utils/csvLogger.js';
 
 export const userRouter = new Hono();
 const userRepository = new UserRepository();
@@ -130,7 +130,7 @@ userRouter.post('/:userId/like', async (c) => {
         matchCreated = true;
       }
     }
-    const eventTimestamp = new Date().toISOString();
+    const eventTimestamp = nowJstString();
     await logWithUserDetails('user_events.csv', [
       eventTimestamp,
       likingUser.uid,
@@ -188,28 +188,28 @@ userRouter.get('/encounters', async (c) => {
   const blockedUserIds = await blockRepository.findAllIds(userId);
   const friendIds = await matchRepository.findAll(userId);
   // すれ違ったユーザー一覧を取得
-  const users: EncounteredUser[] = await encounterRepository.findRecentEncounteredUsers(userId);
-  const safeUsers = users
-    .filter((user: EncounteredUser) => !blockedUserIds.includes(user.id))
-    .map((user: EncounteredUser) => {
-      const {
-        email,
-        lastEncounteredAt,
-        encounterCount,
-        ...rest
-      } = user;
-      return {
-        ...rest,
-        lastEncounteredAt: lastEncounteredAt instanceof Date
-          ? lastEncounteredAt.toISOString()
-          : lastEncounteredAt ?? null,
-        encounterCount: typeof encounterCount === 'number' ? encounterCount : 1,
-        isFriend: friendIds.includes(user.id),
-      };
-    });
+    const users: EncounteredUser[] = await encounterRepository.findRecentEncounteredUsers(userId);
+    const safeUsers = users
+      .filter((user: EncounteredUser) => !blockedUserIds.includes(user.id))
+      .map((user: EncounteredUser) => {
+        const {
+          email,
+          lastEncounteredAt,
+          encounterCount,
+          ...rest
+        } = user;
+        return {
+          ...rest,
+          lastEncounteredAt: lastEncounteredAt instanceof Date
+            ? toJstString(lastEncounteredAt)
+            : lastEncounteredAt ?? null,
+          encounterCount: typeof encounterCount === 'number' ? encounterCount : 1,
+          isFriend: friendIds.includes(user.id),
+        };
+      });
   await logWithUserDetails(
     'user_events.csv',
-    [new Date().toISOString(), userId, 'ACTIVE', '', JSON.stringify({ path: '/encounters' })],
+    [nowJstString(), userId, 'ACTIVE', '', JSON.stringify({ path: '/encounters' })],
     [userId],
     'user_event:active',
   );
@@ -228,7 +228,7 @@ userRouter.get('/friends', async (c) => {
   const safeUsers = users.map(({ email, ...rest }: User) => {
     const meta = encounterMeta.get(rest.id);
     const lastEncounteredAt = meta?.lastEncounteredAt instanceof Date
-      ? meta.lastEncounteredAt.toISOString()
+      ? toJstString(meta.lastEncounteredAt)
       : meta?.lastEncounteredAt ?? null;
     const encounterCount = typeof meta?.encounterCount === 'number'
       ? meta.encounterCount
@@ -325,7 +325,7 @@ userRouter.get('/:userId', async (c) => {
       delete profileCopy.snsLinks;
     }
     await logWithUserDetails('user_events.csv', [
-      new Date().toISOString(),
+      nowJstString(),
       viewerId,
       'VIEW_PROFILE',
       targetId,
