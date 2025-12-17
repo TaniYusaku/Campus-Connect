@@ -152,9 +152,8 @@ class BleScanNotifier extends StateNotifier<BleScanState> {
       if (adName.startsWith(kCcLocalNamePrefix)) {
         final observedId = adName.substring(kCcLocalNamePrefix.length);
         final last = _reported[observedId];
-        // rate-limit: send at most once per 15 minutes per ID (tempID window)
-        if (last == null ||
-            now.difference(last) > const Duration(minutes: 15)) {
+        // rate-limit: send at most once per 5 minutes per ID (tempID window)
+        if (last == null || now.difference(last) > const Duration(minutes: 5)) {
           _reported[observedId] = now;
           final api = _ref.read(apiServiceProvider);
           // fire-and-forget; errors are logged in ApiService

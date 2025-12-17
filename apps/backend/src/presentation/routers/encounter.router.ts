@@ -21,7 +21,8 @@ const registerTempIdSchema = z.object({
   expiresAt: z.union([z.string(), z.number()]).optional(),
 });
 
-const tempIdTtlMinutes = Math.max(1, Number(process.env.TEMPID_TTL_MINUTES ?? '17'));
+// tempId の寿命: 広告のローテーション（5分）より少し長めに保持して解決漏れを防ぐ
+const tempIdTtlMinutes = Math.max(1, Number(process.env.TEMPID_TTL_MINUTES ?? '6'));
 
 export const encounterRouter = new Hono();
 const encounterRepository = new EncounterRepository();

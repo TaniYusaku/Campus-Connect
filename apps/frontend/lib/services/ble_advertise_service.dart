@@ -20,7 +20,7 @@ class BleAdvertiseService {
 
   static const _kIdKey = 'advertise_id';
   static const _kIdTsKey = 'advertise_id_ts';
-  static const Duration _kRotationInterval = Duration(minutes: 15);
+  static const Duration _kRotationInterval = Duration(minutes: 5);
 
   final _statusController =
       StreamController<({bool advertising, String? error})>.broadcast();

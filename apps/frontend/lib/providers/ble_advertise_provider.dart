@@ -83,7 +83,7 @@ class BleAdvertiseNotifier extends StateNotifier<BleAdvertiseState> {
     // Watch rotating tempId changes and register to server
     _idSub = _svc.idStream.listen((id) async {
       state = state.copyWith(advertiseId: id, localName: 'CC-$id');
-      // best-effort: register to backend with 16min expiry
+      // best-effort: register to backend with 6min expiry
       final ok = await _registerTempId(id);
       if (!ok) {
         // ignore: avoid_print
@@ -108,7 +108,7 @@ class BleAdvertiseNotifier extends StateNotifier<BleAdvertiseState> {
     final api = _ref.read(apiServiceProvider);
     final future = api.registerTempId(
       tempId: id,
-      expiresAt: DateTime.now().add(const Duration(minutes: 16)),
+      expiresAt: DateTime.now().add(const Duration(minutes: 6)),
     );
     _inFlightRegisterId = id;
     _inFlightRegisterFuture = future;

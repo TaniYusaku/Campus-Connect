@@ -50,7 +50,7 @@
     * **備考:** サーバーは `observations/{pair}` ドキュメントに最終観測時刻を記録し、相互観測かつクールダウン経過済みであれば `recentEncounters` と `encounterCount` を更新し、必要に応じてマッチ判定を行います。旧仕様で想定していた `POST /encounters` は現在は使用しません。
 
 * **POST `/encounters/register-tempid`**
-    * **利用する場面:** アプリが15分周期でtempIdをローテーションした際に、そのtempIdと有効期限をサーバーへ登録する。
+    * **利用する場面:** アプリが5分周期でtempIdをローテーションした際に、そのtempIdと有効期限（約6分）をサーバーへ登録する。
     * **必要な理由:** 観測APIで受け取ったtempIdをユーザーIDへ解決するため。
     * **備考:** `tempIds/{tempId}` に `userId` と `expiresAt` を保存し、クライアントは毎回のローテーション時に登録します。
 
