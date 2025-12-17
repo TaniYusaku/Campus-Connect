@@ -15,6 +15,7 @@ import type { EncounteredUser } from '../../domain/entities/encounter.entity.js'
 import type { User } from '../../domain/entities/user.entity.js';
 // (deduped) ILikeRepository/LikeRepository imports are above
 import { getStorage } from 'firebase-admin/storage';
+import { logToCsv } from '../../utils/csvLogger.js';
 
 export const userRouter = new Hono();
 const userRepository = new UserRepository();
@@ -129,6 +130,13 @@ userRouter.post('/:userId/like', async (c) => {
         matchCreated = true;
       }
     }
+    logToCsv('user_events.csv', [
+      new Date().toISOString(),
+      likingUser.uid,
+      'SEND_LIKE',
+      likedUserId,
+      JSON.stringify({ matchCreated }),
+    ]);
     return c.json({ message: 'Successfully liked user.', matchCreated }, 201);
   } catch (error) {
     console.error('Failed to like user:', error);
@@ -184,6 +192,7 @@ userRouter.get('/encounters', async (c) => {
         isFriend: friendIds.includes(user.id),
       };
     });
+  logToCsv('user_events.csv', [new Date().toISOString(), userId, 'ACTIVE', '', JSON.stringify({ path: '/encounters' })]);
   return c.json(safeUsers);
 });
 
@@ -280,6 +289,13 @@ userRouter.get('/:userId', async (c) => {
     if (!isFriend) {
       delete profileCopy.snsLinks;
     }
+    logToCsv('user_events.csv', [
+      new Date().toISOString(),
+      viewerId,
+      'VIEW_PROFILE',
+      targetId,
+      JSON.stringify({ isFriend }),
+    ]);
     return c.json(profileCopy);
   } catch (error) {
     console.error('Failed to fetch public profile:', error);
