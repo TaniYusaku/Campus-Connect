@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/user.dart';
 import 'package:frontend/providers/public_profile_provider.dart';
 import 'package:frontend/shared/app_theme.dart';
 import 'package:frontend/shared/profile_constants.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PublicProfileScreen extends ConsumerWidget {
   const PublicProfileScreen({
@@ -121,6 +123,51 @@ String _snsLabel(String key) {
     default:
       if (key.isEmpty) return 'SNS';
       return '${key[0].toUpperCase()}${key.length > 1 ? key.substring(1) : ''}';
+  }
+}
+
+Future<void> _launchSnsLink(
+  BuildContext context,
+  String platform,
+  String handle,
+) async {
+  final trimmed = handle.trim();
+  if (trimmed.isEmpty) return;
+
+  final uri = _buildSnsUri(platform, trimmed);
+  try {
+    if (uri != null) {
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (launched) return;
+    }
+  } catch (_) {
+    // fall through to clipboard fallback
+  }
+
+  await Clipboard.setData(ClipboardData(text: trimmed));
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('$trimmed をクリップボードにコピーしました'),
+      duration: const Duration(seconds: 2),
+    ),
+  );
+}
+
+Uri? _buildSnsUri(String platform, String handle) {
+  final trimmed = handle.trim();
+  if (trimmed.isEmpty) return null;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return Uri.tryParse(trimmed);
+  }
+  final normalized = trimmed.startsWith('@') ? trimmed.substring(1) : trimmed;
+  switch (platform.toLowerCase()) {
+    case 'x':
+    case 'twitter':
+      return Uri.tryParse('https://x.com/$normalized');
+    case 'instagram':
+      return Uri.tryParse('https://www.instagram.com/$normalized');
+    default:
+      return null;
   }
 }
 
@@ -357,6 +404,7 @@ Widget buildPublicProfileContent(
                       leading: _snsIcon(entry.key),
                       title: Text('${_snsLabel(entry.key)}: ${entry.value}'),
                       dense: true,
+                      onTap: () => _launchSnsLink(context, entry.key, entry.value),
                     ),
                   ),
                 ),

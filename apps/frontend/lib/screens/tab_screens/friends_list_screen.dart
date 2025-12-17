@@ -5,6 +5,7 @@ import 'package:frontend/models/user.dart';
 import 'package:frontend/providers/api_provider.dart';
 import 'package:frontend/screens/public_profile_screen.dart';
 import 'package:frontend/shared/app_theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 final friendsFutureProvider = FutureProvider<List<User>>((ref) async {
   final api = ref.read(apiServiceProvider);
@@ -608,15 +609,7 @@ class _SocialChip extends StatelessWidget {
         '${platform.toUpperCase()}: $label',
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      onPressed: () async {
-        await Clipboard.setData(ClipboardData(text: label));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$label をクリップボードにコピーしました'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      },
+      onPressed: () => _launchSocial(context, platform, label),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       backgroundColor: AppColors.paleGold.withOpacity(0.7),
     );
@@ -633,6 +626,51 @@ class _SocialChip extends StatelessWidget {
         return Icons.chat_bubble_outline;
       default:
         return Icons.link;
+    }
+  }
+
+  static Future<void> _launchSocial(
+    BuildContext context,
+    String platform,
+    String handle,
+  ) async {
+    final trimmed = handle.trim();
+    if (trimmed.isEmpty) return;
+
+    final uri = _buildSocialUri(platform, trimmed);
+    try {
+      if (uri != null) {
+        final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (launched) return;
+      }
+    } catch (_) {
+      // fall through to clipboard fallback
+    }
+
+    await Clipboard.setData(ClipboardData(text: trimmed));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$trimmed をクリップボードにコピーしました'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  static Uri? _buildSocialUri(String platform, String handle) {
+    final trimmed = handle.trim();
+    if (trimmed.isEmpty) return null;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return Uri.tryParse(trimmed);
+    }
+    final normalized = trimmed.startsWith('@') ? trimmed.substring(1) : trimmed;
+    switch (platform.toLowerCase()) {
+      case 'x':
+      case 'twitter':
+        return Uri.tryParse('https://x.com/$normalized');
+      case 'instagram':
+        return Uri.tryParse('https://www.instagram.com/$normalized');
+      default:
+        return null;
     }
   }
 }

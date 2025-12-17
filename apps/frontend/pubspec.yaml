@@ -47,6 +47,7 @@ dependencies:
   intl: ^0.18.0
   google_fonts: ^6.2.1
   vibration: ^2.0.0
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
