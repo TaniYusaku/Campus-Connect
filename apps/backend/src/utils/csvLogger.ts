@@ -91,7 +91,7 @@ const toDetailColumns = (user?: Partial<User> & { id: string }): string[] => {
     user.userName ?? '',
     user.email ?? '',
     user.faculty ?? '',
-    user.grade ?? '',
+    user.grade !== undefined && user.grade !== null ? String(user.grade) : '',
     user.gender ?? '',
     user.profilePhotoUrl ?? '',
     user.bio ?? '',
@@ -143,7 +143,7 @@ export const logUserSnapshot = (user: Partial<User> & { id: string }, action: st
     user.userName ?? '',
     user.email ?? '',
     user.faculty ?? '',
-    user.grade ?? '',
+    user.grade !== undefined && user.grade !== null ? String(user.grade) : '',
     user.gender ?? '',
     user.profilePhotoUrl ?? '',
     user.bio ?? '',
@@ -192,11 +192,9 @@ export const logWithUserDetails = async (
       );
       userMap = new Map<string, Partial<User> & { id: string }>();
       fetchedSnapshots.forEach(({ id, snap }) => {
-        if (snap.exists) {
-          userMap?.set(id, { id, ...(snap.data() as User) });
-        } else {
-          userMap?.set(id, { id });
-        }
+        const data = snap.exists ? (snap.data() as User) : undefined;
+        const merged: Partial<User> & { id: string } = { ...(data ?? {}), id };
+        userMap?.set(id, merged);
       });
     } catch (err) {
       console.error(`[CSV Log Error] Failed to fetch user details for ${fileName}:`, err);
