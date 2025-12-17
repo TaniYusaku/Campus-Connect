@@ -1,5 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { getFirestore } from 'firebase-admin/firestore';
 import type { User } from '../domain/entities/user.entity.js';
 
 const LOG_DIR = join(process.cwd(), 'logs');
@@ -92,4 +93,38 @@ export const logUserSnapshot = (user: Partial<User> & { id: string }, action: st
     toIsoString(user.createdAt),
     toIsoString(user.updatedAt),
   ]);
+};
+
+// 任意のCSVログを書き出したタイミングで、関連するユーザーのスナップショットも併記する
+export const logWithUserDetails = async (
+  fileName: string,
+  columns: (string | number | undefined | null)[],
+  userIds: string[] = [],
+  action?: string,
+): Promise<void> => {
+  logToCsv(fileName, columns);
+  if (!userIds || userIds.length === 0) return;
+  try {
+    const db = getFirestore();
+    const uniqueIds = Array.from(new Set(userIds)).filter((id) => !!id);
+    if (uniqueIds.length === 0) return;
+    const snapshots = await Promise.all(
+      uniqueIds.map((id) =>
+        db
+          .collection('users')
+          .doc(id)
+          .get()
+          .then((snap) => ({ id, snap })),
+      ),
+    );
+    snapshots.forEach(({ id, snap }) => {
+      if (snap.exists) {
+        logUserSnapshot(snap.data() as User, action ?? fileName);
+      } else {
+        logUserSnapshot({ id }, action ?? fileName);
+      }
+    });
+  } catch (err) {
+    console.error(`[CSV Log Error] Failed to append user details for ${fileName}:`, err);
+  }
 };

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { EncounterRepository } from '../../infrastructure/firebase/encounter.repository.js';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { logToCsv } from '../../utils/csvLogger.js';
+import { logWithUserDetails } from '../../utils/csvLogger.js';
 
 const encounterSchema = z.object({
   encounteredUserId: z.string().min(1),
@@ -51,7 +51,7 @@ encounterRouter.post(
         const [u1, u2] = [user.uid as string, encounteredUserId].sort();
         const doc = await db.collection('users').doc(u1).collection('recentEncounters').doc(u2).get();
         const count = doc.exists ? (doc.data() as { count?: number } | undefined)?.count : undefined;
-        logToCsv('encounters.csv', [new Date().toISOString(), u1, u2, count ?? '']);
+        await logWithUserDetails('encounters.csv', [new Date().toISOString(), u1, u2, count ?? ''], [u1, u2], 'encounter:create');
       } catch (err) {
         console.error('Failed to log encounter CSV (manual):', err);
       }
@@ -72,8 +72,8 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
   const now = Timestamp.now();
   const serverTimestamp = new Date().toISOString();
   let resolvedUserId = '';
-  const logObservation = (status: string) => {
-    logToCsv('ble_observations.csv', [
+  const logObservation = async (status: string) => {
+    await logWithUserDetails('ble_observations.csv', [
       serverTimestamp,
       user.uid,
       observedId,
@@ -81,7 +81,7 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
       status,
       rssi,
       timestamp ?? '',
-    ]);
+    ], [user.uid, resolvedUserId].filter(Boolean), 'ble_observation');
   };
 
   // tempId -> userId を解決（期限切れは無効）
@@ -89,14 +89,14 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
   const tempDoc = await db.collection('tempIds').doc(observedId).get();
   if (!tempDoc.exists) {
     console.log('observe unresolved: no tempId doc');
-    logObservation('not_found');
+    await logObservation('not_found');
     return c.json({ ok: true, resolved: false }, 202);
   }
   const tdata = tempDoc.data() as { userId: string; expiresAt?: FirebaseFirestore.Timestamp } | undefined;
   if (!tdata || !tdata.expiresAt || tdata.expiresAt.toMillis() <= now.toMillis()) {
     console.log('observe unresolved: expired or missing', tdata);
     resolvedUserId = tdata?.userId ?? '';
-    logObservation('expired');
+    await logObservation('expired');
     return c.json({ ok: true, resolved: false }, 202);
   }
 
@@ -104,7 +104,7 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
   const me = user.uid as string;
   resolvedUserId = otherId;
   if (otherId === me) {
-    logObservation('self');
+    await logObservation('self');
     return c.json({ ok: true, resolved: true, self: true }, 200);
   }
 
@@ -164,23 +164,23 @@ encounterRouter.post('/observe', zValidator('json', observeSchema), async (c) =>
       try {
         console.log('observe mutual: creating encounter', { u1, u2 });
         const matchCreated = await encounterRepository.create(u1, u2);
-        logObservation('mutual_created');
+        await logObservation('mutual_created');
         try {
           const doc = await db.collection('users').doc(u1).collection('recentEncounters').doc(u2).get();
           const count = doc.exists ? (doc.data() as { count?: number } | undefined)?.count : undefined;
-          logToCsv('encounters.csv', [new Date().toISOString(), u1, u2, count ?? '']);
+          await logWithUserDetails('encounters.csv', [new Date().toISOString(), u1, u2, count ?? ''], [u1, u2], 'encounter:mutual');
         } catch (logErr) {
           console.error('Failed to log encounter CSV (mutual observe):', logErr);
         }
         return c.json({ ok: true, resolved: true, mutual: true, matchCreated }, 201);
       } catch (e) {
         console.error('observe mutual create failed', e);
-        logObservation('mutual_error');
+        await logObservation('mutual_error');
         return c.json({ error: 'Failed to record mutual encounter' }, 500);
       }
     }
   }
-  logObservation('resolved_only');
+  await logObservation('resolved_only');
 
   return c.json({ ok: true, resolved: true, mutual: false }, 202);
 });
@@ -208,7 +208,12 @@ encounterRouter.post('/register-tempid', zValidator('json', registerTempIdSchema
   try {
     await db.collection('tempIds').doc(tempId).set(payload, { merge: true });
     console.log('register-tempid stored', { uid, tempId });
-    logToCsv('tempid_registrations.csv', [new Date().toISOString(), uid, tempId, new Date(expiresMs).toISOString()]);
+    await logWithUserDetails(
+      'tempid_registrations.csv',
+      [new Date().toISOString(), uid, tempId, new Date(expiresMs).toISOString()],
+      [uid],
+      'tempid:register',
+    );
     return c.json({ ok: true, expiresAt: new Date(expiresMs).toISOString() });
   } catch (err) {
     console.error('register-tempid error', { uid, tempId, err });

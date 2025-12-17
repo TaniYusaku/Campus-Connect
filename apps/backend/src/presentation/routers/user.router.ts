@@ -15,7 +15,7 @@ import type { EncounteredUser } from '../../domain/entities/encounter.entity.js'
 import type { User } from '../../domain/entities/user.entity.js';
 // (deduped) ILikeRepository/LikeRepository imports are above
 import { getStorage } from 'firebase-admin/storage';
-import { logToCsv } from '../../utils/csvLogger.js';
+import { logWithUserDetails } from '../../utils/csvLogger.js';
 
 export const userRouter = new Hono();
 const userRepository = new UserRepository();
@@ -131,16 +131,26 @@ userRouter.post('/:userId/like', async (c) => {
       }
     }
     const eventTimestamp = new Date().toISOString();
-    logToCsv('user_events.csv', [
+    await logWithUserDetails('user_events.csv', [
       eventTimestamp,
       likingUser.uid,
       'SEND_LIKE',
       likedUserId,
       JSON.stringify({ matchCreated }),
-    ]);
+    ], [likingUser.uid, likedUserId], 'user_event:send_like');
     if (matchCreated) {
-      logToCsv('user_events.csv', [eventTimestamp, likingUser.uid, 'MATCHED', likedUserId, 'Trigger:Like']);
-      logToCsv('user_events.csv', [eventTimestamp, likedUserId, 'MATCHED', likingUser.uid, 'Trigger:ReceivedLike']);
+      await logWithUserDetails(
+        'user_events.csv',
+        [eventTimestamp, likingUser.uid, 'MATCHED', likedUserId, 'Trigger:Like'],
+        [likingUser.uid, likedUserId],
+        'user_event:matched',
+      );
+      await logWithUserDetails(
+        'user_events.csv',
+        [eventTimestamp, likedUserId, 'MATCHED', likingUser.uid, 'Trigger:ReceivedLike'],
+        [likingUser.uid, likedUserId],
+        'user_event:matched',
+      );
     }
     return c.json({ message: 'Successfully liked user.', matchCreated }, 201);
   } catch (error) {
@@ -197,7 +207,12 @@ userRouter.get('/encounters', async (c) => {
         isFriend: friendIds.includes(user.id),
       };
     });
-  logToCsv('user_events.csv', [new Date().toISOString(), userId, 'ACTIVE', '', JSON.stringify({ path: '/encounters' })]);
+  await logWithUserDetails(
+    'user_events.csv',
+    [new Date().toISOString(), userId, 'ACTIVE', '', JSON.stringify({ path: '/encounters' })],
+    [userId],
+    'user_event:active',
+  );
   return c.json(safeUsers);
 });
 
@@ -309,13 +324,13 @@ userRouter.get('/:userId', async (c) => {
     if (!isFriend) {
       delete profileCopy.snsLinks;
     }
-    logToCsv('user_events.csv', [
+    await logWithUserDetails('user_events.csv', [
       new Date().toISOString(),
       viewerId,
       'VIEW_PROFILE',
       targetId,
       JSON.stringify({ isFriend }),
-    ]);
+    ], [viewerId, targetId], 'user_event:view_profile');
     return c.json(profileCopy);
   } catch (error) {
     console.error('Failed to fetch public profile:', error);
