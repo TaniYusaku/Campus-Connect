@@ -35,42 +35,45 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   late final List<_OnboardingStep> _steps = [
     _OnboardingStep(
-      title: 'Bluetooth をオンに',
-      body: 'Campus Connect は近くにいる学生を BLE で検知します。',
+      title: 'すれ違いを開始',
+      body: 'ホームの「すれ違い」タブ上部のボタンでスキャンと広告を開始/停止できます。アプリを開いている間だけ計測します。',
       tips: const [
-        'Bluetoothの許可をオンにしてください。',
-        '省電力モードをオフにすると検知が安定します。',
-        '⚠️アプリを閉じたら検知が止まります。',
+        'Bluetoothの権限をオンにしてください。',
+        '開始中は端末が5分ごとにIDをローテーションしながら広告します。',
+        'バックグラウンドでは止まるので、使うときは画面を開いたままに。',
       ],
       icon: Icons.bluetooth_searching,
       gradient: const [Color(0xFF0E3A64), Color(0xFF22629B)],
     ),
     _OnboardingStep(
-      title: '気になる相手にいいね',
-      body: 'すれ違い一覧から “いいね” を送ると、相手には匿名のままいいねが届きます。',
+      title: 'すれ違いリストからいいね',
+      body: '検知した学生が時系列で表示され、プロフィール確認やいいね・ブロックができます。',
       tips: const [
-        'あなたが送ったことは相手に知らされません。',
-        'すれ違い、いいねは 24 時間後に自動的削除されます。',
+        'フィルターで性別や同じ学部/学年だけに絞り込めます。',
+        'いいねすると一覧から隠れ、「いいね」タブに24時間保存されます。',
+        '間違えても「いいね」タブから取り消せます（友達になった後はブロックのみ）。',
       ],
       icon: Icons.favorite_border,
       gradient: const [Color(0xFF5F2C82), Color(0xFF49A09D)],
     ),
     _OnboardingStep(
-      title: '再会したらマッチ',
-      body: '相互にいいねした時点で互いの友達リストに追加されます。',
+      title: '相互いいねで友達に',
+      body: '相手もいいねするとその場で友達リストに追加され、再会を待たずにSNSリンクを確認できます。',
       tips: const [
-        'マッチ後はプロフィールの SNS から連絡が取れます。',
-        'ブロックすればいつでも関係をリセットできます。',
+        '友達成立時はポップアップでお知らせ。',
+        '友達タブでは最終すれ違い時刻や回数も見られます。',
+        '再会時はアプリ内通知が届きます（通知がオンの場合）。',
       ],
       icon: Icons.auto_awesome,
       gradient: const [Color(0xFF512DA8), Color(0xFF9575CD)],
     ),
     _OnboardingStep(
-      title: '安全に楽しみ、友達を作りましょう',
-      body: '困った相手はすぐにブロック。アプリ内では本名も公開されません。',
+      title: '安心して使う',
+      body: '困った相手はブロックできます（解除不可）。ニックネームで参加でき、SNSリンクは任意です。',
       tips: const [
-        'ブロックすると以後お互いのリストに表示されません。',
-        'プロフィールは丁寧に整えると相手に安心感を与えられます。',
+        'ブロックすると以後すれ違い/友達/いいねに表示されません。',
+        '設定画面から通知やプロフィール編集、退会などを操作できます。',
+        'チュートリアルは 設定 > チュートリアル を開くといつでも再確認できます。',
       ],
       icon: Icons.verified_user,
       gradient: const [Color(0xFF00416A), Color(0xFFE4E5E6)],
@@ -128,7 +131,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     children: [
                       TextButton(
                         onPressed: _finish,
-                        child: const Text('あとで設定する'),
+                        child: const Text('あとで読む'),
                       ),
                       Expanded(
                         child: Center(
@@ -174,7 +177,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     opacity: _index == _steps.length - 1 ? 1 : 0.8,
                     duration: const Duration(milliseconds: 300),
                     child: Text(
-                      '設定 > 通知 でアプリ内通知をオンにしておくと、再会したときにすぐ気付けます。',
+                      '設定 > 通知を受け取る をオンにすると、友達成立や再会の通知を見逃しません。',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondary,
                       ),

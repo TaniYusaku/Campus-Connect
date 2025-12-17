@@ -174,6 +174,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(height: 32),
           const _SectionHeader(label: 'その他'),
           ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('アプリバージョン'),
+            subtitle: const Text('V1'),
+            enabled: false,
+          ),
+          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('ログアウト'),
             onTap: _processing ? null : _logout,

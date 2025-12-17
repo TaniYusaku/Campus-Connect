@@ -209,7 +209,22 @@ userRouter.get('/friends', async (c) => {
   // ブロック済みユーザーを除外
   const filteredIds = friendIds.filter((id: string) => !blockedUserIds.includes(id));
   const users: User[] = await userRepository.findByIds(filteredIds);
-  const safeUsers = users.map(({ email, ...rest }: User) => rest);
+  const encounterMeta = await encounterRepository.findEncounterMetadata(userId, filteredIds);
+  const safeUsers = users.map(({ email, ...rest }: User) => {
+    const meta = encounterMeta.get(rest.id);
+    const lastEncounteredAt = meta?.lastEncounteredAt instanceof Date
+      ? meta.lastEncounteredAt.toISOString()
+      : meta?.lastEncounteredAt ?? null;
+    const encounterCount = typeof meta?.encounterCount === 'number'
+      ? meta.encounterCount
+      : undefined;
+    return {
+      ...rest,
+      lastEncounteredAt,
+      encounterCount,
+      isFriend: true,
+    };
+  });
   return c.json(safeUsers);
 });
 

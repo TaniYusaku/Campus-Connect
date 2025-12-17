@@ -1,4 +1,4 @@
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 import type { IEncounterRepository } from '../../domain/repositories/encounter.repository.js';
 import type { ILikeRepository } from '../../domain/repositories/like.repository.js';
@@ -117,6 +117,44 @@ export class EncounterRepository implements IEncounterRepository {
       .filter((user): user is EncounteredUser => user !== undefined);
 
     return sortedUsers;
+  }
+
+  async findEncounterMetadata(
+    userId: string,
+    targetUserIds: string[],
+  ): Promise<Map<string, { lastEncounteredAt?: Date; encounterCount?: number }>> {
+    const db = getFirestore();
+    const encountersCol = db.collection('users').doc(userId).collection('recentEncounters');
+    const result = new Map<string, { lastEncounteredAt?: Date; encounterCount?: number }>();
+
+    if (targetUserIds.length === 0) {
+      return result;
+    }
+
+    const chunkSize = 10; // Firestore `in` クエリの上限
+    const chunks: string[][] = [];
+    for (let i = 0; i < targetUserIds.length; i += chunkSize) {
+      chunks.push(targetUserIds.slice(i, i + chunkSize));
+    }
+
+    const snapshots = await Promise.all(
+      chunks.map((chunk) =>
+        encountersCol.where(FieldPath.documentId(), 'in', chunk).get(),
+      ),
+    );
+
+    snapshots.forEach((snapshot) => {
+      snapshot.forEach((doc) => {
+        const data = doc.data() as Partial<RecentEncounter> & { lastEncounteredAt?: any; count?: number };
+        const lastEncounteredAt = data.lastEncounteredAt
+          ? (data.lastEncounteredAt.toDate ? data.lastEncounteredAt.toDate() : new Date(data.lastEncounteredAt))
+          : undefined;
+        const encounterCount = typeof data.count === 'number' ? data.count : undefined;
+        result.set(doc.id, { lastEncounteredAt, encounterCount });
+      });
+    });
+
+    return result;
   }
 
   async deleteBetween(userId1: string, userId2: string): Promise<void> {
