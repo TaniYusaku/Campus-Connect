@@ -36,7 +36,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   String? _selectedFaculty;
   String? _selectedGradeStr; // '未設定','1'..,'M1','M2'
   String? _selectedGender;
-  String? _selectedBioTemplate;
   String _selectedMbti = '選択しない';
 
   Future<void> _pickAndUploadPhoto() async {
@@ -130,8 +129,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       _selectedGradeStr = '未設定';
     }
     _bioCtl.text = u.bio ?? '';
-    _selectedBioTemplate =
-        (u.bio != null && kBioTemplates.contains(u.bio)) ? u.bio : null;
     final normalizedHobbies = <String>{};
     _hobbies = [];
     for (final hobby in u.hobbies) {
@@ -194,6 +191,34 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     final label = kMbtiLabels[code];
     if (label == null || label.isEmpty) return code;
     return '$code（$label）';
+  }
+
+  Color _mbtiColor(String code, ColorScheme scheme) {
+    // 16Personalitiesのグループ色に合わせる。
+    switch (code) {
+      case 'INTJ':
+      case 'INTP':
+      case 'ENTJ':
+      case 'ENTP':
+        return const Color(0xFF7B61FF);
+      case 'INFJ':
+      case 'INFP':
+      case 'ENFJ':
+      case 'ENFP':
+        return const Color(0xFF2FBF71);
+      case 'ISTJ':
+      case 'ISFJ':
+      case 'ESTJ':
+      case 'ESFJ':
+        return const Color(0xFF2D6CDF);
+      case 'ISTP':
+      case 'ISFP':
+      case 'ESTP':
+      case 'ESFP':
+        return const Color(0xFFF2A73B);
+      default:
+        return scheme.onSurface;
+    }
   }
 
   InputDecoration _buildDecoration(String label, {String? hint}) {
@@ -435,31 +460,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                         decoration: const InputDecoration(labelText: '性別 (必須)'),
                       ),
                       const SizedBox(height: 12),
-                      DropdownButtonFormField<String?>(
-                        value: _selectedBioTemplate,
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('テンプレートを選択しない'),
-                          ),
-                          ...kBioTemplates.map(
-                            (s) => DropdownMenuItem<String?>(
-                              value: s,
-                              child: Text(s),
-                            ),
-                          ),
-                        ],
-                        onChanged: (v) {
-                          setState(() => _selectedBioTemplate = v);
-                          if (v != null) {
-                            _bioCtl.text = v;
-                          }
-                        },
-                        decoration: const InputDecoration(
-                          labelText: '自己紹介テンプレート',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
                       TextFormField(
                         controller: _bioCtl,
                         decoration: const InputDecoration(
@@ -556,10 +556,29 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                                     value: s,
                                     child: Text(
                                       s == '選択しない' ? s : _mbtiDisplay(s),
+                                      style: TextStyle(
+                                        color: _mbtiColor(
+                                          s,
+                                          Theme.of(context).colorScheme,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 )
                                 .toList(),
+                        selectedItemBuilder: (context) {
+                          final scheme = Theme.of(context).colorScheme;
+                          return kMbtiOptions
+                              .map(
+                                (s) => Text(
+                                  s == '選択しない' ? s : _mbtiDisplay(s),
+                                  style: TextStyle(
+                                    color: _mbtiColor(s, scheme),
+                                  ),
+                                ),
+                              )
+                              .toList();
+                        },
                         onChanged: (v) {
                           if (v == null) return;
                           setState(() => _selectedMbti = v);
