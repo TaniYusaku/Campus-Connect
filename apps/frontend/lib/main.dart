@@ -10,6 +10,7 @@ import 'widgets/in_app_notification_host.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/terms_screen.dart';
 import 'screens/auth/auth_welcome_screen.dart';
+import 'screens/privacy_policy_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ← Firebase前に必要
@@ -47,11 +48,13 @@ class LaunchGate extends StatefulWidget {
 class _LaunchGateState extends State<LaunchGate> {
   static const _welcomeKey = 'welcome_seen';
   static const _termsKey = 'terms_accepted';
+  static const _privacyKey = 'privacy_policy_seen';
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   bool _loadingPrefs = true;
   bool _welcomeSeen = false;
   bool _termsAccepted = false;
+  bool _privacySeen = false;
 
   @override
   void initState() {
@@ -62,10 +65,12 @@ class _LaunchGateState extends State<LaunchGate> {
   Future<void> _loadPrefs() async {
     final welcome = await _storage.read(key: _welcomeKey);
     final terms = await _storage.read(key: _termsKey);
+    final privacy = await _storage.read(key: _privacyKey);
     if (!mounted) return;
     setState(() {
       _welcomeSeen = welcome == '1';
       _termsAccepted = terms == '1';
+      _privacySeen = privacy == '1';
       _loadingPrefs = false;
     });
   }
@@ -80,6 +85,12 @@ class _LaunchGateState extends State<LaunchGate> {
     await _storage.write(key: _termsKey, value: '1');
     if (!mounted) return;
     setState(() => _termsAccepted = true);
+  }
+
+  Future<void> _handlePrivacyAccepted() async {
+    await _storage.write(key: _privacyKey, value: '1');
+    if (!mounted) return;
+    setState(() => _privacySeen = true);
   }
 
   Widget _buildAuthEntry() {
@@ -113,6 +124,13 @@ class _LaunchGateState extends State<LaunchGate> {
 
     if (!_termsAccepted) {
       return TermsScreen(onAccepted: _handleTermsAccepted);
+    }
+
+    if (!_privacySeen) {
+      return PrivacyPolicyScreen(
+        onAccepted: _handlePrivacyAccepted,
+        showConsent: true,
+      );
     }
 
     return _buildAuthEntry();

@@ -153,6 +153,18 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
     return '${diff.inDays}日前';
   }
 
+  String _gradeLabel(int? grade) {
+    if (grade == null) return '学年未設定';
+    switch (grade) {
+      case 5:
+        return 'M1';
+      case 6:
+        return 'M2';
+      default:
+        return '${grade}年';
+    }
+  }
+
   List<User> _filterByGender(List<User> users) {
     switch (_genderFilter) {
       case _GenderFilter.all:
@@ -484,7 +496,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                           runSpacing: 4,
                           children: [
                             _InfoChip(label: user.faculty ?? '学部未設定'),
-                            _InfoChip(label: '${user.grade}年'),
+                            _InfoChip(label: _gradeLabel(user.grade)),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -709,7 +721,7 @@ class _EncounterScreenState extends ConsumerState<EncounterScreen>
                   children: [
                     const SizedBox(height: 4),
                     Text(
-                      '${entry.faculty ?? '学部未設定'} ${entry.grade ?? '-'}年',
+                      '${entry.faculty ?? '学部未設定'} ${_gradeLabel(entry.grade)}',
                       style: Theme.of(context)
                           .textTheme
                           .bodySmall

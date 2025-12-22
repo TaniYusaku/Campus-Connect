@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:frontend/providers/api_provider.dart';
 import 'package:frontend/providers/auth_provider.dart';
 import 'package:frontend/providers/notification_preferences_provider.dart';
@@ -84,6 +85,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         builder: (_) => const OnboardingScreen(returnToCaller: true),
       ),
     );
+  }
+
+  Future<void> _resetAppData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('アプリデータを初期化しますか？'),
+        content: const Text(
+          'ログアウトされます。初回フローを確認するにはアプリの再起動が必要です。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('初期化する'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _processing = true);
+    const storage = FlutterSecureStorage();
+    await storage.deleteAll();
+    ref.invalidate(notificationPreferenceProvider);
+    if (!mounted) return;
+    await ref.read(authProvider.notifier).logout();
+    if (!mounted) return;
+    setState(() => _processing = false);
   }
 
   @override
@@ -178,6 +210,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('アプリバージョン'),
             subtitle: const Text('V1'),
             enabled: false,
+          ),
+          ListTile(
+            leading: const Icon(Icons.restart_alt),
+            title: const Text('アプリデータを初期化'),
+            subtitle: const Text('ログアウトして初期状態に戻します'),
+            textColor: Colors.red,
+            iconColor: Colors.red,
+            onTap: _processing ? null : _resetAppData,
           ),
           ListTile(
             leading: const Icon(Icons.logout),
